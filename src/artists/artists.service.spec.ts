@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { ArtistsService } from './artists.service';
 import { Artist } from './entities/artist.entity';
 import { CreateArtistDto } from './dto/create-artist.dto';
@@ -58,14 +58,39 @@ describe('ArtistsService', () => {
         name: 'Test Artist',
       };
 
+      mockRepository.findOne.mockResolvedValue(null);
       mockRepository.create.mockReturnValue(mockArtist);
       mockRepository.save.mockResolvedValue(mockArtist);
 
       const result = await service.create(createArtistDto);
 
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { name: createArtistDto.name },
+      });
       expect(repository.create).toHaveBeenCalledWith(createArtistDto);
       expect(repository.save).toHaveBeenCalledWith(mockArtist);
       expect(result).toEqual(mockArtist);
+    });
+
+    it('should throw ConflictException when artist with same name already exists', async () => {
+      const createArtistDto: CreateArtistDto = {
+        name: 'Test Artist',
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+
+      await expect(service.create(createArtistDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.create(createArtistDto)).rejects.toThrow(
+        `Artist with name '${createArtistDto.name}' already exists`,
+      );
+
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { name: createArtistDto.name },
+      });
+      expect(repository.create).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -101,13 +126,18 @@ describe('ArtistsService', () => {
 
       const updatedArtist = { ...mockArtist, name: 'Updated Artist Name' };
 
-      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockArtist)
+        .mockResolvedValueOnce(null);
       mockRepository.save.mockResolvedValue(updatedArtist);
 
       const result = await service.update(mockArtist.id, updateArtistDto);
 
-      expect(repository.findOne).toHaveBeenCalledWith({
+      expect(repository.findOne).toHaveBeenNthCalledWith(1, {
         where: { id: mockArtist.id },
+      });
+      expect(repository.findOne).toHaveBeenNthCalledWith(2, {
+        where: { name: updateArtistDto.name },
       });
       expect(repository.save).toHaveBeenCalledWith({
         ...mockArtist,
@@ -126,6 +156,70 @@ describe('ArtistsService', () => {
       await expect(
         service.update('non-existent-id', updateArtistDto),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ConflictException when trying to update name to existing artist name', async () => {
+      const updateArtistDto: UpdateArtistDto = {
+        name: 'Existing Artist Name',
+      };
+
+      const existingArtist = {
+        ...mockArtist,
+        id: 'different-id',
+        name: 'Existing Artist Name',
+      };
+
+      jest.clearAllMocks();
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockArtist)
+        .mockResolvedValueOnce(existingArtist);
+
+      await expect(
+        service.update(mockArtist.id, updateArtistDto),
+      ).rejects.toThrow(ConflictException);
+
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('should update artist when name is not being changed', async () => {
+      const updateArtistDto: UpdateArtistDto = {};
+
+      const updatedArtist = { ...mockArtist };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue(updatedArtist);
+
+      const result = await service.update(mockArtist.id, updateArtistDto);
+
+      expect(repository.findOne).toHaveBeenCalledTimes(1);
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: mockArtist.id },
+      });
+      expect(repository.save).toHaveBeenCalledWith({
+        ...mockArtist,
+        ...updateArtistDto,
+      });
+      expect(result).toEqual(updatedArtist);
+    });
+
+    it('should update artist when name is the same as current name', async () => {
+      const updateArtistDto: UpdateArtistDto = {
+        name: mockArtist.name,
+      };
+
+      const updatedArtist = { ...mockArtist };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue(updatedArtist);
+
+      const result = await service.update(mockArtist.id, updateArtistDto);
+
+      expect(repository.findOne).toHaveBeenCalledTimes(1);
+      expect(repository.save).toHaveBeenCalledWith({
+        ...mockArtist,
+        ...updateArtistDto,
+      });
+      expect(result).toEqual(updatedArtist);
     });
   });
 

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Artist } from './entities/artist.entity';
@@ -13,6 +17,16 @@ export class ArtistsService {
   ) {}
 
   async create(createArtistDto: CreateArtistDto): Promise<Artist> {
+    const existingArtist = await this.artistsRepository.findOne({
+      where: { name: createArtistDto.name },
+    });
+
+    if (existingArtist) {
+      throw new ConflictException(
+        `Artist with name '${createArtistDto.name}' already exists`,
+      );
+    }
+
     const artist = this.artistsRepository.create(createArtistDto);
     return this.artistsRepository.save(artist);
   }
@@ -31,6 +45,18 @@ export class ArtistsService {
 
   async update(id: string, updateArtistDto: UpdateArtistDto): Promise<Artist> {
     const artist = await this.findOne(id);
+
+    if (updateArtistDto.name && updateArtistDto.name !== artist.name) {
+      const existingArtist = await this.artistsRepository.findOne({
+        where: { name: updateArtistDto.name },
+      });
+
+      if (existingArtist) {
+        throw new ConflictException(
+          `Artist with name '${updateArtistDto.name}' already exists`,
+        );
+      }
+    }
 
     Object.assign(artist, updateArtistDto);
     return this.artistsRepository.save(artist);
