@@ -29,15 +29,22 @@ export class ArtistsController {
     @Body() createArtistDto: CreateArtistDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const artist = await this.artistsService.create(createArtistDto);
+    try {
+      const artist = await this.artistsService.create(createArtistDto);
 
-    // If there is an image add it
-    if (file) {
-      const imageUrl = await this.fileUploadService.uploadFile(file, 'artists');
-      return this.artistsService.updateImage(artist.id, imageUrl);
+      if (file) {
+        const imageUrl = await this.fileUploadService.uploadFile(
+          file,
+          'artists',
+        );
+        return this.artistsService.updateImage(artist.id, imageUrl);
+      }
+
+      return artist;
+    } catch (error) {
+      console.error('Error creating artist:', error);
+      throw error;
     }
-
-    return artist;
   }
 
   @Get(':id')
