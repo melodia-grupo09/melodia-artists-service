@@ -22,7 +22,7 @@ import { ArtistsModule } from './artists/artists.module';
             type: 'postgres' as const,
             url: databaseUrl,
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: configService.get('NODE_ENV') !== 'production',
+            synchronize: true, // Temporarily enable for table creation
             ssl: { rejectUnauthorized: false },
           };
         } else {
