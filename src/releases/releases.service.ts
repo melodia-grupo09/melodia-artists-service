@@ -24,7 +24,10 @@ export class ReleasesService {
   async findAll(): Promise<Release[]> {
     return this.releasesRepository.find({
       relations: ['artist'],
-      order: { releaseDate: 'DESC' },
+      order: {
+        releaseDate: 'DESC',
+        title: 'ASC', // If tie we choose by alphabethic order
+      },
     });
   }
 
@@ -45,7 +48,10 @@ export class ReleasesService {
     return this.releasesRepository.find({
       where: { artistId },
       relations: ['artist'],
-      order: { releaseDate: 'DESC' },
+      order: {
+        releaseDate: 'DESC',
+        title: 'ASC', // If tie we choose by alphabethic order
+      },
     });
   }
 
@@ -56,8 +62,43 @@ export class ReleasesService {
     return this.releasesRepository.find({
       where: { artistId, type },
       relations: ['artist'],
-      order: { releaseDate: 'DESC' },
+      order: {
+        releaseDate: 'DESC',
+        title: 'ASC', // If tie we choose by alphabethic order
+      },
     });
+  }
+
+  async findLatestByArtist(artistId: string): Promise<Release | null> {
+    const latestRelease = await this.releasesRepository.findOne({
+      where: { artistId },
+      relations: ['artist'],
+      order: {
+        releaseDate: 'DESC',
+        title: 'ASC',
+      },
+    });
+
+    return latestRelease;
+  }
+
+  async findByArtistWithLatestFlag(
+    artistId: string,
+  ): Promise<(Release & { isLatest: boolean })[]> {
+    const releases = await this.findByArtist(artistId);
+
+    if (releases.length === 0) {
+      return [];
+    }
+
+    const latestReleaseDate = releases[0].releaseDate;
+
+    return releases.map((release, index) => ({
+      ...release,
+      isLatest:
+        index === 0 ||
+        release.releaseDate.getTime() === latestReleaseDate.getTime(),
+    }));
   }
 
   async update(

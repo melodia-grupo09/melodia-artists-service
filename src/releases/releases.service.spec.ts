@@ -107,7 +107,10 @@ describe('ReleasesService', () => {
 
       expect(mockRepository.find).toHaveBeenCalledWith({
         relations: ['artist'],
-        order: { releaseDate: 'DESC' },
+        order: {
+          releaseDate: 'DESC',
+          title: 'ASC',
+        },
       });
       expect(result).toEqual(releases);
     });
@@ -145,7 +148,10 @@ describe('ReleasesService', () => {
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { artistId: mockRelease.artistId },
         relations: ['artist'],
-        order: { releaseDate: 'DESC' },
+        order: {
+          releaseDate: 'DESC',
+          title: 'ASC',
+        },
       });
       expect(result).toEqual(releases);
     });
@@ -164,7 +170,10 @@ describe('ReleasesService', () => {
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { artistId: mockRelease.artistId, type: ReleaseType.ALBUM },
         relations: ['artist'],
-        order: { releaseDate: 'DESC' },
+        order: {
+          releaseDate: 'DESC',
+          title: 'ASC',
+        },
       });
       expect(result).toEqual(releases);
     });
@@ -261,6 +270,48 @@ describe('ReleasesService', () => {
       await expect(service.remove('nonexistent-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('findLatestByArtist', () => {
+    it('should return the latest release by artist', async () => {
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+
+      const result = await service.findLatestByArtist(mockRelease.artistId);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { artistId: mockRelease.artistId },
+        relations: ['artist'],
+        order: {
+          releaseDate: 'DESC',
+          title: 'ASC',
+        },
+      });
+      expect(result).toEqual(mockRelease);
+    });
+  });
+
+  describe('findByArtistWithLatestFlag', () => {
+    it('should return releases with isLatest flag', async () => {
+      const releases = [mockRelease];
+      mockRepository.find.mockResolvedValue(releases);
+
+      const result = await service.findByArtistWithLatestFlag(
+        mockRelease.artistId,
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isLatest).toBe(true); // First release should be latest
+    });
+
+    it('should handle empty releases array', async () => {
+      mockRepository.find.mockResolvedValue([]);
+
+      const result = await service.findByArtistWithLatestFlag(
+        mockRelease.artistId,
+      );
+
+      expect(result).toEqual([]);
     });
   });
 });

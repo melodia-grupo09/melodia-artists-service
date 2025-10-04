@@ -71,20 +71,31 @@ export class ReleasesController {
   }
 
   @Get('artist/:artistId')
-  @ApiOperation({ summary: 'Get releases by artist' })
+  @ApiOperation({ summary: 'Get releases by artist ID' })
   @ApiParam({ name: 'artistId', description: 'Artist UUID' })
   @ApiQuery({
     name: 'type',
-    enum: ReleaseType,
     required: false,
+    enum: ReleaseType,
     description: 'Filter by release type',
+  })
+  @ApiQuery({
+    name: 'withLatestFlag',
+    required: false,
+    type: Boolean,
+    description: 'Include isLatest flag for each release',
   })
   @ApiResponse({ status: 200, description: 'List of artist releases' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   findByArtist(
     @Param('artistId', ParseUUIDPipe) artistId: string,
     @Query('type') type?: ReleaseType,
+    @Query('withLatestFlag') withLatestFlag?: boolean,
   ) {
+    if (withLatestFlag) {
+      return this.releasesService.findByArtistWithLatestFlag(artistId);
+    }
+
     if (type) {
       return this.releasesService.findByArtistAndType(artistId, type);
     }
