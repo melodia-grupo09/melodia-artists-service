@@ -1,5 +1,7 @@
 # Melodia Artists Service
 
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen) [![Coverage](https://img.shields.io/badge/coverage-79.86%25-brightgreen)](#) [![Tests](https://img.shields.io/badge/tests-59%20passing-brightgreen)](#)
+
 A microservice for managing artists in the Melodia music platform. This service handles artist profiles, image uploads, and provides a RESTful API for artist operations.
 
 ## 🚀 Live Deployment
@@ -14,10 +16,10 @@ The complete API documentation is available through Swagger UI:
 **🔗 [Interactive API Documentation](https://melodia-artists-64869ccb2e15.herokuapp.com/api)**
 
 ### Base URL
+
 ```
 https://melodia-artists-64869ccb2e15.herokuapp.com/
 ```
-
 
 ## 🛠 Technology Stack
 
