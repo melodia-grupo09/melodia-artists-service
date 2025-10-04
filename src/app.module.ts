@@ -6,6 +6,7 @@ import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ArtistsModule } from './artists/artists.module';
+import { ReleasesModule } from './releases/releases.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ArtistsModule } from './artists/artists.module';
       serveRoot: '/uploads',
     }),
     ArtistsModule,
+    ReleasesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

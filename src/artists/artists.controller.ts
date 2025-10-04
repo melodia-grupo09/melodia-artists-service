@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { ArtistsService } from './artists.service';
 import { FileUploadService } from '../upload/file-upload.service';
+import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { CreateArtistWithFileDto } from './dto/create-artist-with-file.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
@@ -31,6 +32,7 @@ export class ArtistsController {
   constructor(
     private readonly artistsService: ArtistsService,
     private readonly fileUploadService: FileUploadService,
+    private readonly releasesService: ReleasesService,
   ) {}
 
   @Post()
@@ -115,6 +117,15 @@ export class ArtistsController {
   ) {
     const coverUrl = await this.fileUploadService.uploadFile(file, 'artists');
     return this.artistsService.updateCover(id, coverUrl);
+  }
+
+  @Get(':id/releases')
+  @ApiOperation({ summary: 'Get artist releases (discography)' })
+  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiResponse({ status: 200, description: 'Artist releases found' })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  getArtistReleases(@Param('id', ParseUUIDPipe) id: string) {
+    return this.releasesService.findByArtist(id);
   }
 
   @Delete(':id')
