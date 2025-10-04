@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ArtistsController } from './artists.controller';
 import { ArtistsService } from './artists.service';
 import { FileUploadService } from '../upload/file-upload.service';
+import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
@@ -16,11 +17,12 @@ describe('ArtistsController', () => {
   const mockArtist: Artist = {
     id: '123e4567-e89b-12d3-a456-426614174000',
     name: 'Test Artist',
-    imageUrl: 'http://example.com/image.jpg',
-    coverUrl: 'http://example.com/cover.jpg',
-    followersCount: 0,
+    imageUrl: 'https://example.com/image.jpg',
+    coverUrl: 'https://example.com/cover.jpg',
+    followersCount: 100,
     createdAt: new Date(),
     updatedAt: new Date(),
+    releases: [],
   };
 
   const mockArtistsService = {
@@ -36,17 +38,8 @@ describe('ArtistsController', () => {
     uploadFile: jest.fn(),
   };
 
-  const mockFile: Express.Multer.File = {
-    fieldname: 'image',
-    originalname: 'test-image.jpg',
-    encoding: '7bit',
-    mimetype: 'image/jpeg',
-    size: 1024,
-    buffer: Buffer.from('fake-image-data'),
-    destination: '',
-    filename: '',
-    path: '',
-    stream: {} as any,
+  const mockReleasesService = {
+    findByArtist: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -61,6 +54,10 @@ describe('ArtistsController', () => {
           provide: FileUploadService,
           useValue: mockFileUploadService,
         },
+        {
+          provide: ReleasesService,
+          useValue: mockReleasesService,
+        },
       ],
     }).compile();
 
@@ -69,47 +66,40 @@ describe('ArtistsController', () => {
     fileUploadService = module.get<FileUploadService>(FileUploadService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
   describe('create', () => {
-    it('should create an artist without image', async () => {
-      const createArtistDto: CreateArtistDto = {
-        name: 'Test Artist',
-      };
+    const createArtistDto: CreateArtistDto = {
+      name: 'Test Artist',
+    };
 
+    it('should create an artist without image', async () => {
       mockArtistsService.create.mockResolvedValue(mockArtist);
 
-      const result = await controller.create(createArtistDto);
+      const result = await controller.create(createArtistDto, undefined);
 
-      expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
       expect(result).toEqual(mockArtist);
+      expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
       expect(fileUploadService.uploadFile).not.toHaveBeenCalled();
     });
 
     it('should create an artist with image', async () => {
-      const createArtistDto: CreateArtistDto = {
-        name: 'Test Artist',
-      };
+      const mockFile = {
+        buffer: Buffer.from('mock file'),
+        mimetype: 'image/jpeg',
+        originalname: 'test.jpg',
+      } as Express.Multer.File;
 
-      const artistWithImage = {
-        ...mockArtist,
-        imageUrl: 'http://example.com/uploaded-image.jpg',
-      };
-
+      const uploadedImageUrl = 'https://example.com/uploaded-image.jpg';
+      mockFileUploadService.uploadFile.mockResolvedValue(uploadedImageUrl);
       mockArtistsService.create.mockResolvedValue(mockArtist);
-      mockFileUploadService.uploadFile.mockResolvedValue(
-        'http://example.com/uploaded-image.jpg',
-      );
-      mockArtistsService.updateImage.mockResolvedValue(artistWithImage);
+      mockArtistsService.updateImage.mockResolvedValue(mockArtist);
 
       const result = await controller.create(createArtistDto, mockFile);
 
+      expect(result).toEqual(mockArtist);
       expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
       expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
         mockFile,
@@ -117,95 +107,127 @@ describe('ArtistsController', () => {
       );
       expect(artistsService.updateImage).toHaveBeenCalledWith(
         mockArtist.id,
-        'http://example.com/uploaded-image.jpg',
+        uploadedImageUrl,
       );
-      expect(result).toEqual(artistWithImage);
     });
   });
 
   describe('findOne', () => {
-    it('should return an artist by id', async () => {
+    it('should return an artist', async () => {
       mockArtistsService.findOne.mockResolvedValue(mockArtist);
 
       const result = await controller.findOne(mockArtist.id);
 
-      expect(artistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
       expect(result).toEqual(mockArtist);
+      expect(artistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
     });
   });
 
   describe('update', () => {
+    const updateArtistDto: UpdateArtistDto = {
+      name: 'Updated Artist',
+    };
+
     it('should update an artist', async () => {
-      const updateArtistDto: UpdateArtistDto = {
-        name: 'Updated Artist Name',
-      };
-
-      const updatedArtist = { ...mockArtist, name: 'Updated Artist Name' };
-
-      mockArtistsService.update.mockResolvedValue(updatedArtist);
+      mockArtistsService.update.mockResolvedValue(mockArtist);
 
       const result = await controller.update(mockArtist.id, updateArtistDto);
 
+      expect(result).toEqual(mockArtist);
       expect(artistsService.update).toHaveBeenCalledWith(
         mockArtist.id,
         updateArtistDto,
       );
-      expect(result).toEqual(updatedArtist);
     });
   });
 
   describe('updateImage', () => {
     it('should update artist image', async () => {
-      const newImageUrl = 'http://example.com/new-image.jpg';
-      const updatedArtist = { ...mockArtist, imageUrl: newImageUrl };
+      const mockFile = {
+        buffer: Buffer.from('mock file'),
+        mimetype: 'image/jpeg',
+        originalname: 'test.jpg',
+      } as Express.Multer.File;
 
-      mockFileUploadService.uploadFile.mockResolvedValue(newImageUrl);
-      mockArtistsService.updateImage.mockResolvedValue(updatedArtist);
+      const uploadedImageUrl = 'https://example.com/uploaded-image.jpg';
+      mockFileUploadService.uploadFile.mockResolvedValue(uploadedImageUrl);
+      mockArtistsService.updateImage.mockResolvedValue(mockArtist);
 
       const result = await controller.updateImage(mockArtist.id, mockFile);
 
+      expect(result).toEqual(mockArtist);
       expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
         mockFile,
         'artists',
       );
       expect(artistsService.updateImage).toHaveBeenCalledWith(
         mockArtist.id,
-        newImageUrl,
+        uploadedImageUrl,
       );
-      expect(result).toEqual(updatedArtist);
     });
   });
 
   describe('updateCover', () => {
     it('should update artist cover', async () => {
-      const newCoverUrl = 'http://example.com/new-cover.jpg';
-      const updatedArtist = { ...mockArtist, coverUrl: newCoverUrl };
+      const mockFile = {
+        buffer: Buffer.from('mock file'),
+        mimetype: 'image/jpeg',
+        originalname: 'cover.jpg',
+      } as Express.Multer.File;
 
-      mockFileUploadService.uploadFile.mockResolvedValue(newCoverUrl);
-      mockArtistsService.updateCover.mockResolvedValue(updatedArtist);
+      const uploadedCoverUrl = 'https://example.com/uploaded-cover.jpg';
+      mockFileUploadService.uploadFile.mockResolvedValue(uploadedCoverUrl);
+      mockArtistsService.updateCover.mockResolvedValue(mockArtist);
 
       const result = await controller.updateCover(mockArtist.id, mockFile);
 
+      expect(result).toEqual(mockArtist);
       expect(fileUploadService.uploadFile).toHaveBeenCalledWith(
         mockFile,
         'artists',
       );
       expect(artistsService.updateCover).toHaveBeenCalledWith(
         mockArtist.id,
-        newCoverUrl,
+        uploadedCoverUrl,
       );
-      expect(result).toEqual(updatedArtist);
     });
   });
 
   describe('remove', () => {
     it('should remove an artist', async () => {
-      mockArtistsService.remove.mockResolvedValue(undefined);
+      mockArtistsService.remove.mockResolvedValue(mockArtist);
 
       const result = await controller.remove(mockArtist.id);
 
+      expect(result).toEqual(mockArtist);
       expect(artistsService.remove).toHaveBeenCalledWith(mockArtist.id);
-      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getArtistReleases', () => {
+    it('should return releases for an artist', async () => {
+      const mockReleases = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          title: 'Test Album',
+          type: 'album',
+          releaseDate: new Date(),
+          imageUrl: 'https://example.com/album.jpg',
+          songIds: ['song1', 'song2'],
+          artist: mockArtist,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+
+      mockReleasesService.findByArtist.mockResolvedValue(mockReleases);
+
+      const result = await controller.getArtistReleases(mockArtist.id);
+
+      expect(result).toEqual(mockReleases);
+      expect(mockReleasesService.findByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+      );
     });
   });
 });

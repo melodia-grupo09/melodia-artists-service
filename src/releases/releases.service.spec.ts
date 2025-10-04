@@ -1,0 +1,266 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException } from '@nestjs/common';
+import { ReleasesService } from './releases.service';
+import { Release, ReleaseType } from './entities/release.entity';
+
+describe('ReleasesService', () => {
+  let service: ReleasesService;
+
+  const mockRelease = {
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    title: 'Test Album',
+    type: ReleaseType.ALBUM,
+    releaseDate: new Date('2023-05-12'),
+    coverUrl: 'https://example.com/cover.jpg',
+    artistId: '456e7890-e89b-12d3-a456-426614174000',
+    songIds: ['song1', 'song2'],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    artist: {
+      id: '456e7890-e89b-12d3-a456-426614174000',
+      name: 'Test Artist',
+    },
+  };
+
+  const mockRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    findOne: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ReleasesService,
+        {
+          provide: getRepositoryToken(Release),
+          useValue: mockRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<ReleasesService>(ReleasesService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a new release', async () => {
+      const createReleaseDto = {
+        title: 'Test Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        songIds: ['song1', 'song2'],
+      };
+
+      mockRepository.create.mockReturnValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      const result = await service.create(createReleaseDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        releaseDate: new Date(createReleaseDto.releaseDate),
+        songIds: createReleaseDto.songIds,
+      });
+      expect(mockRepository.save).toHaveBeenCalledWith(mockRelease);
+      expect(result).toEqual(mockRelease);
+    });
+
+    it('should create a release with empty songIds if not provided', async () => {
+      const createReleaseDto = {
+        title: 'Test Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+      };
+
+      mockRepository.create.mockReturnValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      await service.create(createReleaseDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        releaseDate: new Date(createReleaseDto.releaseDate),
+        songIds: [],
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return all releases', async () => {
+      const releases = [mockRelease];
+      mockRepository.find.mockResolvedValue(releases);
+
+      const result = await service.findAll();
+
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        relations: ['artist'],
+        order: { releaseDate: 'DESC' },
+      });
+      expect(result).toEqual(releases);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a release when found', async () => {
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+
+      const result = await service.findOne(mockRelease.id);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: mockRelease.id },
+        relations: ['artist'],
+      });
+      expect(result).toEqual(mockRelease);
+    });
+
+    it('should throw NotFoundException when release not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findOne('nonexistent-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('findByArtist', () => {
+    it('should return releases by artist', async () => {
+      const releases = [mockRelease];
+      mockRepository.find.mockResolvedValue(releases);
+
+      const result = await service.findByArtist(mockRelease.artistId);
+
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { artistId: mockRelease.artistId },
+        relations: ['artist'],
+        order: { releaseDate: 'DESC' },
+      });
+      expect(result).toEqual(releases);
+    });
+  });
+
+  describe('findByArtistAndType', () => {
+    it('should return releases by artist and type', async () => {
+      const releases = [mockRelease];
+      mockRepository.find.mockResolvedValue(releases);
+
+      const result = await service.findByArtistAndType(
+        mockRelease.artistId,
+        ReleaseType.ALBUM,
+      );
+
+      expect(mockRepository.find).toHaveBeenCalledWith({
+        where: { artistId: mockRelease.artistId, type: ReleaseType.ALBUM },
+        relations: ['artist'],
+        order: { releaseDate: 'DESC' },
+      });
+      expect(result).toEqual(releases);
+    });
+  });
+
+  describe('update', () => {
+    it('should update a release', async () => {
+      const updateDto = { title: 'Updated Album' };
+      const updatedRelease = { ...mockRelease, ...updateDto };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.update(mockRelease.id, updateDto);
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('should update release with new date', async () => {
+      const updateDto = { releaseDate: '2024-01-01' };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      await service.update(mockRelease.id, updateDto);
+
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('addSongs', () => {
+    it('should add songs to release', async () => {
+      const newSongs = ['song3', 'song4'];
+      const updatedRelease = {
+        ...mockRelease,
+        songIds: [...mockRelease.songIds, ...newSongs],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.addSongs(mockRelease.id, newSongs);
+
+      expect(result.songIds).toEqual(['song1', 'song2', 'song3', 'song4']);
+    });
+
+    it('should not add duplicate songs', async () => {
+      const duplicateSongs = ['song1', 'song3'];
+      const updatedRelease = {
+        ...mockRelease,
+        songIds: ['song1', 'song2', 'song3'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.addSongs(mockRelease.id, duplicateSongs);
+
+      expect(result.songIds).toEqual(['song1', 'song2', 'song3']);
+    });
+  });
+
+  describe('removeSongs', () => {
+    it('should remove songs from release', async () => {
+      const songsToRemove = ['song1'];
+      const updatedRelease = {
+        ...mockRelease,
+        songIds: ['song2'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.removeSongs(mockRelease.id, songsToRemove);
+
+      expect(result.songIds).toEqual(['song2']);
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove a release', async () => {
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.remove.mockResolvedValue(mockRelease);
+
+      await service.remove(mockRelease.id);
+
+      expect(mockRepository.remove).toHaveBeenCalledWith(mockRelease);
+    });
+
+    it('should throw NotFoundException when release not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.remove('nonexistent-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});
