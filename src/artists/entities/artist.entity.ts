@@ -4,7 +4,9 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Release } from '../../releases/entities/release.entity';
 
 @Entity('artists')
 export class Artist {
@@ -22,6 +24,9 @@ export class Artist {
 
   @Column({ type: 'int', default: 0 })
   followersCount: number;
+
+  @OneToMany(() => Release, (release) => release.artist)
+  releases: Release[];
 
   @CreateDateColumn()
   createdAt: Date;
