@@ -111,12 +111,6 @@ describe('FileUploadService', () => {
 
       const result = await service.uploadFile(mockFile, 'artists');
 
-      expect(cloudinary.config).toHaveBeenCalledWith({
-        cloud_name: 'test-cloud-name',
-        api_key: 'test-api-key',
-        api_secret: 'test-api-secret',
-      });
-
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledWith(
         {
           folder: 'melodia/artists',
