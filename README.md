@@ -1,6 +1,6 @@
 # Melodia Artists Service
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen) [![Coverage](https://img.shields.io/badge/coverage-79.86%25-brightgreen)](#) [![Tests](https://img.shields.io/badge/tests-59%20passing-brightgreen)](#)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen) [![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graph/badge.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service) ![node](https://img.shields.io/badge/node->=18.0.0-brightgreen) ![nestjs](https://img.shields.io/badge/nestjs-10.0-red) ![typescript](https://img.shields.io/badge/typescript-5.1-blue) ![cloudinary](https://img.shields.io/badge/cloudinary-2.0-blue)
 
 A microservice for managing artists in the Melodia music platform. This service handles artist profiles, image uploads, and provides a RESTful API for artist operations.
 
@@ -14,6 +14,10 @@ The application is deployed on Heroku and accessible at:
 The complete API documentation is available through Swagger UI:
 
 **🔗 [Interactive API Documentation](https://melodia-artists-64869ccb2e15.herokuapp.com/api)**
+
+## 📊 Code Coverage
+
+[![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graphs/sunburst.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
 
 ### Base URL
 
