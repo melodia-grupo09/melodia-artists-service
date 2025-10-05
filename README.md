@@ -55,3 +55,5 @@ The service follows a clean architecture pattern with:
 - **Entities**: Database models using TypeORM
 - **DTOs**: Data Transfer Objects for validation
 - **Upload Module**: File handling with Cloudinary integration
+
+.
