@@ -4,7 +4,7 @@ import {
   IsObject,
   ValidateNested,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 class SocialLinksDto {
@@ -57,18 +57,11 @@ class SocialLinksDto {
   website?: string;
 }
 
-export class CreateArtistDto {
-  @ApiProperty({
-    description: 'The name of the artist',
-    example: 'Bruno Mars',
-  })
-  @IsString()
-  name: string;
-
+export class UpdateBioDto {
   @ApiPropertyOptional({
     description: 'Artist biography - supports paragraphs and line breaks',
     example:
-      'Bruno Mars is an American singer, songwriter, and record producer. Known for his stage performances, retro showmanship, and for performing in a wide range of musical styles...',
+      'Bruno Mars is an American singer, songwriter, and record producer.\n\nKnown for his stage performances, retro showmanship, and for performing in a wide range of musical styles...',
   })
   @IsOptional()
   @IsString()

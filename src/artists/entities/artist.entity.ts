@@ -25,6 +25,19 @@ export class Artist {
   @Column({ type: 'int', default: 0 })
   followersCount: number;
 
+  @Column({ type: 'text', nullable: true })
+  bio?: string;
+
+  @Column({ type: 'json', nullable: true })
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    youtube?: string;
+    spotify?: string;
+    website?: string;
+  };
+
   @OneToMany(() => Release, (release) => release.artist)
   releases: Release[];
 

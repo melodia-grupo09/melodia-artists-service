@@ -25,6 +25,7 @@ import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { CreateArtistWithFileDto } from './dto/create-artist-with-file.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
+import { UpdateBioDto } from './dto/update-bio.dto';
 
 @ApiTags('artists')
 @Controller('artists')
@@ -87,6 +88,18 @@ export class ArtistsController {
     @Body() updateArtistDto: UpdateArtistDto,
   ) {
     return this.artistsService.update(id, updateArtistDto);
+  }
+
+  @Patch(':id/bio')
+  @ApiOperation({ summary: 'Update artist bio and social links' })
+  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiResponse({ status: 200, description: 'Bio updated successfully' })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  updateBio(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateBioDto: UpdateBioDto,
+  ) {
+    return this.artistsService.update(id, updateBioDto);
   }
 
   @Patch(':id/image')
