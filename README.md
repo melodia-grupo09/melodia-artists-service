@@ -22,7 +22,11 @@ The complete API documentation is available through Swagger UI:
 - [![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graph/badge.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
 - [View detailed report](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
 
-[![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graphs/sunburst.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
+<div align="center">
+  <a href="https://codecov.io/gh/melodia-grupo09/melodia-artists-service">
+    <img src="https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graphs/sunburst.svg?token=6NMY5QBHL1" alt="Code Coverage Sunburst" width="400"/>
+  </a>
+</div>
 
 ### Base URL
 
