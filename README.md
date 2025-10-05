@@ -15,7 +15,12 @@ The complete API documentation is available through Swagger UI:
 
 **🔗 [Interactive API Documentation](https://melodia-artists-64869ccb2e15.herokuapp.com/api)**
 
-## 📊 Code Coverage
+## 📊 Coverage and Quality Metrics
+
+### Code Coverage
+
+- [![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graph/badge.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
+- [View detailed report](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
 
 [![codecov](https://codecov.io/gh/melodia-grupo09/melodia-artists-service/graphs/sunburst.svg?token=6NMY5QBHL1)](https://codecov.io/gh/melodia-grupo09/melodia-artists-service)
 
