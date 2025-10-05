@@ -196,7 +196,9 @@ export class ArtistsController {
           file,
           'releases',
         );
-        return this.releasesService.update(release.id, { coverUrl });
+        return this.releasesService.updateByArtist(artistId, release.id, {
+          coverUrl,
+        });
       }
 
       return release;

@@ -8,6 +8,7 @@ import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
+import { ReleaseType } from '../releases/entities/release.entity';
 
 describe('ArtistsController', () => {
   let controller: ArtistsController;
@@ -40,6 +41,15 @@ describe('ArtistsController', () => {
 
   const mockReleasesService = {
     findByArtist: jest.fn(),
+    findByArtistWithLatestFlag: jest.fn(),
+    findByArtistAndType: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    findOneByArtist: jest.fn(),
+    updateByArtist: jest.fn(),
+    addSongsByArtist: jest.fn(),
+    removeSongsByArtist: jest.fn(),
+    removeByArtist: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -227,6 +237,308 @@ describe('ArtistsController', () => {
       expect(result).toEqual(mockReleases);
       expect(mockReleasesService.findByArtist).toHaveBeenCalledWith(
         mockArtist.id,
+      );
+    });
+
+    it('should return releases with latest flag', async () => {
+      const mockReleasesWithFlag = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          title: 'Test Album',
+          type: 'album',
+          releaseDate: new Date(),
+          isLatest: true,
+        },
+      ];
+
+      mockReleasesService.findByArtistWithLatestFlag.mockResolvedValue(
+        mockReleasesWithFlag,
+      );
+
+      const result = await controller.getArtistReleases(
+        mockArtist.id,
+        undefined,
+        true,
+      );
+
+      expect(result).toEqual(mockReleasesWithFlag);
+      expect(
+        mockReleasesService.findByArtistWithLatestFlag,
+      ).toHaveBeenCalledWith(mockArtist.id);
+    });
+
+    it('should return releases filtered by type', async () => {
+      const mockAlbums = [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          title: 'Test Album',
+          type: 'ALBUM',
+          releaseDate: new Date(),
+        },
+      ];
+
+      mockReleasesService.findByArtistAndType.mockResolvedValue(mockAlbums);
+
+      const result = await controller.getArtistReleases(
+        mockArtist.id,
+        ReleaseType.ALBUM,
+      );
+
+      expect(result).toEqual(mockAlbums);
+      expect(mockReleasesService.findByArtistAndType).toHaveBeenCalledWith(
+        mockArtist.id,
+        ReleaseType.ALBUM,
+      );
+    });
+  });
+
+  describe('createRelease', () => {
+    it('should create a release for an artist', async () => {
+      const createReleaseDto = {
+        title: 'New Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-12-01',
+        songIds: ['song1', 'song2'],
+      };
+
+      const mockCreatedRelease = {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        ...createReleaseDto,
+        artistId: mockArtist.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockArtistsService.findOne.mockResolvedValue(mockArtist);
+      mockReleasesService.create.mockResolvedValue(mockCreatedRelease);
+
+      const result = await controller.createRelease(
+        mockArtist.id,
+        createReleaseDto as any,
+      );
+
+      expect(result).toEqual(mockCreatedRelease);
+      expect(mockArtistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
+      expect(mockReleasesService.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        artistId: mockArtist.id,
+      });
+    });
+
+    it('should create a release with cover file', async () => {
+      const createReleaseDto = {
+        title: 'New Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-12-01',
+      };
+
+      const mockFile = {
+        originalname: 'cover.jpg',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      const mockCreatedRelease = {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        ...createReleaseDto,
+        artistId: mockArtist.id,
+      };
+
+      const mockUpdatedRelease = {
+        ...mockCreatedRelease,
+        coverUrl: 'https://example.com/cover.jpg',
+      };
+
+      mockArtistsService.findOne.mockResolvedValue(mockArtist);
+      mockReleasesService.create.mockResolvedValue(mockCreatedRelease);
+      mockFileUploadService.uploadFile.mockResolvedValue(
+        'https://example.com/cover.jpg',
+      );
+      mockReleasesService.updateByArtist.mockResolvedValue(mockUpdatedRelease);
+
+      const result = await controller.createRelease(
+        mockArtist.id,
+        createReleaseDto as any,
+        mockFile,
+      );
+
+      expect(result).toEqual(mockUpdatedRelease);
+      expect(mockFileUploadService.uploadFile).toHaveBeenCalledWith(
+        mockFile,
+        'releases',
+      );
+      expect(mockReleasesService.updateByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        mockCreatedRelease.id,
+        { coverUrl: 'https://example.com/cover.jpg' },
+      );
+    });
+  });
+
+  describe('getArtistRelease', () => {
+    it('should return a specific artist release', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+      const mockRelease = {
+        id: releaseId,
+        title: 'Test Album',
+        artistId: mockArtist.id,
+        artist: mockArtist,
+      };
+
+      mockReleasesService.findOneByArtist.mockResolvedValue(mockRelease);
+
+      const result = await controller.getArtistRelease(
+        mockArtist.id,
+        releaseId,
+      );
+
+      expect(result).toEqual(mockRelease);
+      expect(mockReleasesService.findOneByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
+      );
+    });
+  });
+
+  describe('updateRelease', () => {
+    it('should update a release', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+      const updateReleaseDto = {
+        title: 'Updated Album Title',
+      };
+
+      const mockUpdatedRelease = {
+        id: releaseId,
+        title: 'Updated Album Title',
+        artistId: mockArtist.id,
+      };
+
+      mockReleasesService.updateByArtist.mockResolvedValue(mockUpdatedRelease);
+
+      const result = await controller.updateRelease(
+        mockArtist.id,
+        releaseId,
+        updateReleaseDto,
+      );
+
+      expect(result).toEqual(mockUpdatedRelease);
+      expect(mockReleasesService.updateByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
+        updateReleaseDto,
+      );
+    });
+  });
+
+  describe('updateReleaseCover', () => {
+    it('should update release cover', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+      const mockFile = {
+        originalname: 'new-cover.jpg',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      const mockUpdatedRelease = {
+        id: releaseId,
+        coverUrl: 'https://example.com/new-cover.jpg',
+        artistId: mockArtist.id,
+      };
+
+      mockFileUploadService.uploadFile.mockResolvedValue(
+        'https://example.com/new-cover.jpg',
+      );
+      mockReleasesService.updateByArtist.mockResolvedValue(mockUpdatedRelease);
+
+      const result = await controller.updateReleaseCover(
+        mockArtist.id,
+        releaseId,
+        mockFile,
+      );
+
+      expect(result).toEqual(mockUpdatedRelease);
+      expect(mockFileUploadService.uploadFile).toHaveBeenCalledWith(
+        mockFile,
+        'releases',
+      );
+      expect(mockReleasesService.updateByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
+        { coverUrl: 'https://example.com/new-cover.jpg' },
+      );
+    });
+  });
+
+  describe('addSongsToRelease', () => {
+    it('should add songs to a release', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+      const songIds = ['song3', 'song4'];
+
+      const mockUpdatedRelease = {
+        id: releaseId,
+        songIds: ['song1', 'song2', 'song3', 'song4'],
+        artistId: mockArtist.id,
+      };
+
+      mockReleasesService.addSongsByArtist.mockResolvedValue(
+        mockUpdatedRelease,
+      );
+
+      const result = await controller.addSongsToRelease(
+        mockArtist.id,
+        releaseId,
+        { songIds },
+      );
+
+      expect(result).toEqual(mockUpdatedRelease);
+      expect(mockReleasesService.addSongsByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
+        songIds,
+      );
+    });
+  });
+
+  describe('removeSongsFromRelease', () => {
+    it('should remove songs from a release', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+      const songIds = ['song2'];
+
+      const mockUpdatedRelease = {
+        id: releaseId,
+        songIds: ['song1'],
+        artistId: mockArtist.id,
+      };
+
+      mockReleasesService.removeSongsByArtist.mockResolvedValue(
+        mockUpdatedRelease,
+      );
+
+      const result = await controller.removeSongsFromRelease(
+        mockArtist.id,
+        releaseId,
+        { songIds },
+      );
+
+      expect(result).toEqual(mockUpdatedRelease);
+      expect(mockReleasesService.removeSongsByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
+        songIds,
+      );
+    });
+  });
+
+  describe('removeRelease', () => {
+    it('should delete a release', async () => {
+      const releaseId = '123e4567-e89b-12d3-a456-426614174002';
+
+      mockReleasesService.removeByArtist.mockResolvedValue(undefined);
+
+      const result = await controller.removeRelease(mockArtist.id, releaseId);
+
+      expect(result).toBeUndefined();
+      expect(mockReleasesService.removeByArtist).toHaveBeenCalledWith(
+        mockArtist.id,
+        releaseId,
       );
     });
   });
