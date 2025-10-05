@@ -120,6 +120,32 @@ describe('ArtistsController', () => {
         uploadedImageUrl,
       );
     });
+
+    it('should handle error during artist creation', async () => {
+      const error = new Error('Database error');
+      mockArtistsService.create.mockRejectedValue(error);
+
+      await expect(
+        controller.create(createArtistDto, undefined),
+      ).rejects.toThrow('Database error');
+      expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
+    });
+
+    it('should handle error during file upload in artist creation', async () => {
+      const mockFile = {
+        buffer: Buffer.from('mock file'),
+        mimetype: 'image/jpeg',
+        originalname: 'test.jpg',
+      } as Express.Multer.File;
+
+      const error = new Error('Upload failed');
+      mockArtistsService.create.mockResolvedValue(mockArtist);
+      mockFileUploadService.uploadFile.mockRejectedValue(error);
+
+      await expect(
+        controller.create(createArtistDto, mockFile),
+      ).rejects.toThrow('Upload failed');
+    });
   });
 
   describe('findOne', () => {
@@ -371,6 +397,69 @@ describe('ArtistsController', () => {
         mockCreatedRelease.id,
         { coverUrl: 'https://example.com/cover.jpg' },
       );
+    });
+
+    it('should handle error when artist not found during release creation', async () => {
+      const createReleaseDto = {
+        title: 'New Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-12-01',
+      };
+
+      const error = new Error('Artist not found');
+      mockArtistsService.findOne.mockRejectedValue(error);
+
+      await expect(
+        controller.createRelease(mockArtist.id, createReleaseDto as any),
+      ).rejects.toThrow('Artist not found');
+    });
+
+    it('should handle error during release creation', async () => {
+      const createReleaseDto = {
+        title: 'New Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-12-01',
+      };
+
+      const error = new Error('Release creation failed');
+      mockArtistsService.findOne.mockResolvedValue(mockArtist);
+      mockReleasesService.create.mockRejectedValue(error);
+
+      await expect(
+        controller.createRelease(mockArtist.id, createReleaseDto as any),
+      ).rejects.toThrow('Release creation failed');
+    });
+
+    it('should handle error during file upload in release creation', async () => {
+      const createReleaseDto = {
+        title: 'New Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-12-01',
+      };
+
+      const mockFile = {
+        originalname: 'cover.jpg',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      const mockCreatedRelease = {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        ...createReleaseDto,
+        artistId: mockArtist.id,
+      };
+
+      const error = new Error('File upload failed');
+      mockArtistsService.findOne.mockResolvedValue(mockArtist);
+      mockReleasesService.create.mockResolvedValue(mockCreatedRelease);
+      mockFileUploadService.uploadFile.mockRejectedValue(error);
+
+      await expect(
+        controller.createRelease(
+          mockArtist.id,
+          createReleaseDto as any,
+          mockFile,
+        ),
+      ).rejects.toThrow('File upload failed');
     });
   });
 
