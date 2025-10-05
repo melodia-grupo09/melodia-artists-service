@@ -89,6 +89,7 @@ jobs:
           HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
           HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
         run: |
+          echo "Setting up Heroku authentication..."
           echo "machine api.heroku.com" > ~/.netrc
           echo "  login $HEROKU_EMAIL" >> ~/.netrc
           echo "  password $HEROKU_API_KEY" >> ~/.netrc
@@ -96,5 +97,16 @@ jobs:
           echo "  login $HEROKU_EMAIL" >> ~/.netrc
           echo "  password $HEROKU_API_KEY" >> ~/.netrc
           chmod 600 ~/.netrc
-          heroku git:remote --app $HEROKU_APP_NAME
-          git push heroku master
+
+          echo "Verifying environment variables..."
+          if [ -z "$HEROKU_APP_NAME" ]; then
+            echo "Error: HEROKU_APP_NAME is not set"
+            exit 1
+          fi
+          echo "App name: $HEROKU_APP_NAME"
+
+          echo "Adding Heroku remote..."
+          heroku git:remote -a "$HEROKU_APP_NAME"
+
+          echo "Deploying to Heroku..."
+          git push heroku HEAD:master
