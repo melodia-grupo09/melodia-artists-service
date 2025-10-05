@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ArtistsService } from './artists.service';
 import { Artist } from './entities/artist.entity';
 import { CreateArtistDto } from './dto/create-artist.dto';
@@ -20,6 +20,7 @@ describe('ArtistsService', () => {
     followersCount: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
+    releases: [],
   };
 
   const mockRepository = {
@@ -72,7 +73,7 @@ describe('ArtistsService', () => {
       expect(result).toEqual(mockArtist);
     });
 
-    it('should throw ConflictException when artist with same name already exists', async () => {
+    it('should throw BadRequestException when artist with same name already exists', async () => {
       const createArtistDto: CreateArtistDto = {
         name: 'Test Artist',
       };
@@ -80,7 +81,7 @@ describe('ArtistsService', () => {
       mockRepository.findOne.mockResolvedValue(mockArtist);
 
       await expect(service.create(createArtistDto)).rejects.toThrow(
-        ConflictException,
+        BadRequestException,
       );
       await expect(service.create(createArtistDto)).rejects.toThrow(
         `Artist with name '${createArtistDto.name}' already exists`,
@@ -158,7 +159,7 @@ describe('ArtistsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ConflictException when trying to update name to existing artist name', async () => {
+    it('should throw BadRequestException when trying to update name to existing artist name', async () => {
       const updateArtistDto: UpdateArtistDto = {
         name: 'Existing Artist Name',
       };
@@ -176,7 +177,7 @@ describe('ArtistsService', () => {
 
       await expect(
         service.update(mockArtist.id, updateArtistDto),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(BadRequestException);
 
       expect(repository.save).not.toHaveBeenCalled();
     });

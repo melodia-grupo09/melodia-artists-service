@@ -50,8 +50,10 @@ export class ArtistsController {
     type: CreateArtistWithFileDto,
   })
   @ApiResponse({ status: 201, description: 'Artist created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 409, description: 'Artist name already exists' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request or artist name already exists',
+  })
   async create(
     @Body() createArtistDto: CreateArtistDto,
     @UploadedFile() file?: Express.Multer.File,

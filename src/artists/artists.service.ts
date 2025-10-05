@@ -1,7 +1,7 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,7 +22,7 @@ export class ArtistsService {
     });
 
     if (existingArtist) {
-      throw new ConflictException(
+      throw new BadRequestException(
         `Artist with name '${createArtistDto.name}' already exists`,
       );
     }
@@ -52,7 +52,7 @@ export class ArtistsService {
       });
 
       if (existingArtist) {
-        throw new ConflictException(
+        throw new BadRequestException(
           `Artist with name '${updateArtistDto.name}' already exists`,
         );
       }
