@@ -135,4 +135,63 @@ export class ReleasesService {
     const release = await this.findOne(id);
     await this.releasesRepository.remove(release);
   }
+
+  async findOneByArtist(artistId: string, releaseId: string): Promise<Release> {
+    const release = await this.releasesRepository.findOne({
+      where: { id: releaseId, artistId },
+      relations: ['artist'],
+    });
+
+    if (!release) {
+      throw new NotFoundException(
+        `Release with ID ${releaseId} not found for artist ${artistId}`,
+      );
+    }
+
+    return release;
+  }
+
+  async updateByArtist(
+    artistId: string,
+    releaseId: string,
+    updateReleaseDto: UpdateReleaseDto,
+  ): Promise<Release> {
+    const release = await this.findOneByArtist(artistId, releaseId);
+
+    const updateData: UpdateReleaseDto = { ...updateReleaseDto };
+    if (updateReleaseDto.releaseDate) {
+      updateData.releaseDate = new Date(
+        updateReleaseDto.releaseDate,
+      ).toISOString();
+    }
+
+    Object.assign(release, updateData);
+    return this.releasesRepository.save(release);
+  }
+
+  async addSongsByArtist(
+    artistId: string,
+    releaseId: string,
+    songIds: string[],
+  ): Promise<Release> {
+    const release = await this.findOneByArtist(artistId, releaseId);
+    const uniqueSongIds = [...new Set([...release.songIds, ...songIds])];
+    release.songIds = uniqueSongIds;
+    return this.releasesRepository.save(release);
+  }
+
+  async removeSongsByArtist(
+    artistId: string,
+    releaseId: string,
+    songIds: string[],
+  ): Promise<Release> {
+    const release = await this.findOneByArtist(artistId, releaseId);
+    release.songIds = release.songIds.filter((id) => !songIds.includes(id));
+    return this.releasesRepository.save(release);
+  }
+
+  async removeByArtist(artistId: string, releaseId: string): Promise<void> {
+    const release = await this.findOneByArtist(artistId, releaseId);
+    await this.releasesRepository.remove(release);
+  }
 }

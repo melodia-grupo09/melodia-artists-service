@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -18,6 +19,7 @@ import {
   ApiConsumes,
   ApiBody,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ArtistsService } from './artists.service';
 import { FileUploadService } from '../upload/file-upload.service';
@@ -26,6 +28,9 @@ import { CreateArtistDto } from './dto/create-artist.dto';
 import { CreateArtistWithFileDto } from './dto/create-artist-with-file.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { UpdateBioDto } from './dto/update-bio.dto';
+import { CreateReleaseDto } from '../releases/dto/create-release.dto';
+import { UpdateReleaseDto } from '../releases/dto/update-release.dto';
+import { ReleaseType } from '../releases/entities/release.entity';
 
 @ApiTags('artists')
 @Controller('artists')
@@ -135,10 +140,167 @@ export class ArtistsController {
   @Get(':id/releases')
   @ApiOperation({ summary: 'Get artist releases (discography)' })
   @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: ReleaseType,
+    description: 'Filter by release type',
+  })
+  @ApiQuery({
+    name: 'withLatestFlag',
+    required: false,
+    type: Boolean,
+    description: 'Include isLatest flag for each release',
+  })
   @ApiResponse({ status: 200, description: 'Artist releases found' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  getArtistReleases(@Param('id', ParseUUIDPipe) id: string) {
+  getArtistReleases(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('type') type?: ReleaseType,
+    @Query('withLatestFlag') withLatestFlag?: boolean,
+  ) {
+    if (withLatestFlag) {
+      return this.releasesService.findByArtistWithLatestFlag(id);
+    }
+
+    if (type) {
+      return this.releasesService.findByArtistAndType(id, type);
+    }
     return this.releasesService.findByArtist(id);
+  }
+
+  @Post(':id/releases')
+  @UseInterceptors(FileInterceptor('cover'))
+  @ApiOperation({ summary: 'Create a new release for the artist' })
+  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Release created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  async createRelease(
+    @Param('id', ParseUUIDPipe) artistId: string,
+    @Body() createReleaseDto: CreateReleaseDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    try {
+      // Verify artist exists first
+      await this.artistsService.findOne(artistId);
+
+      // Add artistId to the DTO
+      const releaseData = { ...createReleaseDto, artistId };
+      const release = await this.releasesService.create(releaseData);
+
+      // If there is a cover image, upload it
+      if (file) {
+        const coverUrl = await this.fileUploadService.uploadFile(
+          file,
+          'releases',
+        );
+        return this.releasesService.update(release.id, { coverUrl });
+      }
+
+      return release;
+    } catch (error) {
+      console.error('Error creating release:', error);
+      throw error;
+    }
+  }
+
+  @Get(':artistId/releases/:releaseId')
+  @ApiOperation({ summary: 'Get specific release by artist and release ID' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Release found' })
+  @ApiResponse({ status: 404, description: 'Release or artist not found' })
+  getArtistRelease(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+  ) {
+    return this.releasesService.findOneByArtist(artistId, releaseId);
+  }
+
+  @Patch(':artistId/releases/:releaseId')
+  @ApiOperation({ summary: 'Update release information' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Release updated successfully' })
+  @ApiResponse({ status: 404, description: 'Release or artist not found' })
+  updateRelease(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+    @Body() updateReleaseDto: UpdateReleaseDto,
+  ) {
+    return this.releasesService.updateByArtist(
+      artistId,
+      releaseId,
+      updateReleaseDto,
+    );
+  }
+
+  @Patch(':artistId/releases/:releaseId/cover')
+  @UseInterceptors(FileInterceptor('cover'))
+  @ApiOperation({ summary: 'Update release cover image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Cover updated successfully' })
+  @ApiResponse({ status: 404, description: 'Release or artist not found' })
+  async updateReleaseCover(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const coverUrl = await this.fileUploadService.uploadFile(file, 'releases');
+    return this.releasesService.updateByArtist(artistId, releaseId, {
+      coverUrl,
+    });
+  }
+
+  @Patch(':artistId/releases/:releaseId/songs/add')
+  @ApiOperation({ summary: 'Add songs to release' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Songs added successfully' })
+  addSongsToRelease(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+    @Body() body: { songIds: string[] },
+  ) {
+    return this.releasesService.addSongsByArtist(
+      artistId,
+      releaseId,
+      body.songIds,
+    );
+  }
+
+  @Patch(':artistId/releases/:releaseId/songs/remove')
+  @ApiOperation({ summary: 'Remove songs from release' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Songs removed successfully' })
+  removeSongsFromRelease(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+    @Body() body: { songIds: string[] },
+  ) {
+    return this.releasesService.removeSongsByArtist(
+      artistId,
+      releaseId,
+      body.songIds,
+    );
+  }
+
+  @Delete(':artistId/releases/:releaseId')
+  @ApiOperation({ summary: 'Delete release' })
+  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiResponse({ status: 200, description: 'Release deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Release or artist not found' })
+  removeRelease(
+    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('releaseId', ParseUUIDPipe) releaseId: string,
+  ) {
+    return this.releasesService.removeByArtist(artistId, releaseId);
   }
 
   @Delete(':id')
