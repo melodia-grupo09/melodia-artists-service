@@ -68,45 +68,45 @@ jobs:
           name: dist
           path: dist/
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [test-and-coverage, build]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: [test-and-coverage, build]
+  #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
+  #     - name: Install Heroku CLI
+  #       run: |
+  #         curl https://cli-assets.heroku.com/install.sh | sh
 
-      - name: Deploy to Heroku
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
-          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
-        run: |
-          echo "Setting up Heroku authentication..."
-          echo "machine api.heroku.com" > ~/.netrc
-          echo "  login $HEROKU_EMAIL" >> ~/.netrc
-          echo "  password $HEROKU_API_KEY" >> ~/.netrc
-          echo "machine git.heroku.com" >> ~/.netrc
-          echo "  login $HEROKU_EMAIL" >> ~/.netrc
-          echo "  password $HEROKU_API_KEY" >> ~/.netrc
-          chmod 600 ~/.netrc
-
-          echo "Verifying environment variables..."
-          if [ -z "$HEROKU_APP_NAME" ]; then
-            echo "Error: HEROKU_APP_NAME is not set"
-            exit 1
-          fi
-          echo "App name: $HEROKU_APP_NAME"
-
-          echo "Adding Heroku remote..."
-          heroku git:remote -a "$HEROKU_APP_NAME"
-
-          echo "Deploying to Heroku..."
-          git push heroku HEAD:master
+  #     - name: Deploy to Heroku
+  #       env:
+  #         HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+  #         HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME }}
+  #         HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
+  #       run: |
+  #         echo "Setting up Heroku authentication..."
+  #         echo "machine api.heroku.com" > ~/.netrc
+  #         echo "  login $HEROKU_EMAIL" >> ~/.netrc
+  #         echo "  password $HEROKU_API_KEY" >> ~/.netrc
+  #         echo "machine git.heroku.com" >> ~/.netrc
+  #         echo "  login $HEROKU_EMAIL" >> ~/.netrc
+  #         echo "  password $HEROKU_API_KEY" >> ~/.netrc
+  #         chmod 600 ~/.netrc
+          
+  #         echo "Verifying environment variables..."
+  #         if [ -z "$HEROKU_APP_NAME" ]; then
+  #           echo "Error: HEROKU_APP_NAME is not set"
+  #           exit 1
+  #         fi
+  #         echo "App name: $HEROKU_APP_NAME"
+          
+  #         echo "Adding Heroku remote..."
+  #         heroku git:remote -a "$HEROKU_APP_NAME"
+          
+  #         echo "Deploying to Heroku..."
+  #         git push heroku HEAD:master
