@@ -104,10 +104,21 @@ export class ArtistsController {
     description: 'Bad request or artist name already exists',
   })
   async create(
-    @Body() createArtistDto: CreateArtistDto,
+    @Body() body: Record<string, unknown>,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     try {
+      // Extract only the valid CreateArtistDto fields, ignore 'image' field
+      const createArtistDto: CreateArtistDto = {
+        name: body.name as string,
+        bio: body.bio as string | undefined,
+        socialLinks: body.socialLinks
+          ? typeof body.socialLinks === 'string'
+            ? (JSON.parse(body.socialLinks) as CreateArtistDto['socialLinks'])
+            : (body.socialLinks as CreateArtistDto['socialLinks'])
+          : undefined,
+      };
+
       const artist = await this.artistsService.create(createArtistDto);
 
       if (file) {

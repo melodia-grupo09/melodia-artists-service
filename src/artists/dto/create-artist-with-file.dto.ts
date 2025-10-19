@@ -17,4 +17,5 @@ export class CreateArtistWithFileDto {
   })
   @IsOptional()
   image?: any;
+  socialLinks: any;
 }
