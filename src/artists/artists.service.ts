@@ -100,4 +100,18 @@ export class ArtistsService {
 
     return artists;
   }
+
+  async incrementFollowers(id: string): Promise<Artist> {
+    const artist = await this.findOne(id);
+    artist.followersCount += 1;
+    return this.artistsRepository.save(artist);
+  }
+
+  async decrementFollowers(id: string): Promise<Artist> {
+    const artist = await this.findOne(id);
+    if (artist.followersCount > 0) {
+      artist.followersCount -= 1;
+    }
+    return this.artistsRepository.save(artist);
+  }
 }

@@ -33,6 +33,8 @@ describe('ArtistsController', () => {
     updateMedia: jest.fn(),
     remove: jest.fn(),
     search: jest.fn(),
+    incrementFollowers: jest.fn(),
+    decrementFollowers: jest.fn(),
   };
 
   const mockFileUploadService = {
@@ -323,6 +325,40 @@ describe('ArtistsController', () => {
         mockArtist.id,
         uploadedImageUrl,
         uploadedCoverUrl,
+      );
+    });
+  });
+
+  describe('followArtist', () => {
+    it('should increment followers count', async () => {
+      const updatedArtist = {
+        ...mockArtist,
+        followersCount: mockArtist.followersCount + 1,
+      };
+      mockArtistsService.incrementFollowers.mockResolvedValue(updatedArtist);
+
+      const result = await controller.followArtist(mockArtist.id);
+
+      expect(result).toEqual(updatedArtist);
+      expect(artistsService.incrementFollowers).toHaveBeenCalledWith(
+        mockArtist.id,
+      );
+    });
+  });
+
+  describe('unfollowArtist', () => {
+    it('should decrement followers count', async () => {
+      const updatedArtist = {
+        ...mockArtist,
+        followersCount: mockArtist.followersCount - 1,
+      };
+      mockArtistsService.decrementFollowers.mockResolvedValue(updatedArtist);
+
+      const result = await controller.unfollowArtist(mockArtist.id);
+
+      expect(result).toEqual(updatedArtist);
+      expect(artistsService.decrementFollowers).toHaveBeenCalledWith(
+        mockArtist.id,
       );
     });
   });

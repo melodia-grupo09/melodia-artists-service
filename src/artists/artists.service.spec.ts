@@ -397,4 +397,102 @@ describe('ArtistsService', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+  describe('incrementFollowers', () => {
+    it('should increment followers count', async () => {
+      const mockArtist: Artist = {
+        id: '1',
+        name: 'Test Artist',
+        imageUrl: 'http://example.com/image.jpg',
+        coverUrl: undefined,
+        followersCount: 100,
+        bio: undefined,
+        socialLinks: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue({
+        ...mockArtist,
+        followersCount: 101,
+      });
+
+      const result = await service.incrementFollowers('1');
+
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(repository.save).toHaveBeenCalled();
+      expect(result.followersCount).toBe(101);
+    });
+
+    it('should throw NotFoundException if artist not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.incrementFollowers('non-existent-id'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('decrementFollowers', () => {
+    it('should decrement followers count', async () => {
+      const mockArtist: Artist = {
+        id: '1',
+        name: 'Test Artist',
+        imageUrl: 'http://example.com/image.jpg',
+        coverUrl: undefined,
+        followersCount: 100,
+        bio: undefined,
+        socialLinks: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue({
+        ...mockArtist,
+        followersCount: 99,
+      });
+
+      const result = await service.decrementFollowers('1');
+
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(repository.save).toHaveBeenCalled();
+      expect(result.followersCount).toBe(99);
+    });
+
+    it('should not decrement below zero', async () => {
+      const mockArtist: Artist = {
+        id: '1',
+        name: 'Test Artist',
+        imageUrl: 'http://example.com/image.jpg',
+        coverUrl: undefined,
+        followersCount: 0,
+        bio: undefined,
+        socialLinks: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue(mockArtist);
+
+      const result = await service.decrementFollowers('1');
+
+      expect(repository.findOne).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(repository.save).toHaveBeenCalled();
+      expect(result.followersCount).toBe(0);
+    });
+
+    it('should throw NotFoundException if artist not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.decrementFollowers('non-existent-id'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

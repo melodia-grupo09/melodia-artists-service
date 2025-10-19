@@ -368,6 +368,30 @@ export class ArtistsController {
     return this.releasesService.removeByArtist(artistId, releaseId);
   }
 
+  @Patch(':id/follow')
+  @ApiOperation({ summary: 'Follow artist (increment followers count)' })
+  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Follower count incremented successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  followArtist(@Param('id', ParseUUIDPipe) id: string) {
+    return this.artistsService.incrementFollowers(id);
+  }
+
+  @Patch(':id/unfollow')
+  @ApiOperation({ summary: 'Unfollow artist (decrement followers count)' })
+  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Follower count decremented successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  unfollowArtist(@Param('id', ParseUUIDPipe) id: string) {
+    return this.artistsService.decrementFollowers(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete artist' })
   @ApiParam({ name: 'id', description: 'Artist UUID' })
