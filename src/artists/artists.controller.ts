@@ -95,8 +95,31 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Create a new artist' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Artist data with optional image',
+    description: 'Artist data with optional image file',
     type: CreateArtistWithFileDto,
+    examples: {
+      'Create artist with all data': {
+        value: {
+          name: 'Bad Bunny',
+          bio: 'Puerto Rican rapper, singer, and songwriter. He is known for his deep, slurred vocal style and his eclectic fashion sense.',
+          socialLinks:
+            '{"instagram":"https://instagram.com/badbunnypr","twitter":"https://twitter.com/sanbenito","spotify":"https://open.spotify.com/artist/4q3ewBCX7sLwd24euuV69X","youtube":"https://youtube.com/c/BadBunnyOfficial","website":"https://badbunny.com"}',
+          image: '[Binary file data - Select image file in Postman]',
+        },
+      },
+      'Create artist with minimal data': {
+        value: {
+          name: 'New Artist',
+        },
+      },
+      'Create artist with social links only': {
+        value: {
+          name: 'Rosalía',
+          socialLinks:
+            '{"instagram":"https://instagram.com/rosalia.vt","spotify":"https://open.spotify.com/artist/7ltDVBr6mKbRvohxheJ9h1"}',
+        },
+      },
+    },
   })
   @ApiResponse({ status: 201, description: 'Artist created successfully' })
   @ApiResponse({
@@ -148,8 +171,46 @@ export class ArtistsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update artist information' })
   @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiBody({
+    type: UpdateArtistDto,
+    description: 'Artist data to update (all fields are optional)',
+    examples: {
+      'Update all fields': {
+        value: {
+          name: 'J Balvin',
+          bio: 'Colombian reggaeton singer, songwriter, and record producer.',
+          socialLinks: {
+            instagram: 'https://instagram.com/jbalvin',
+            twitter: 'https://twitter.com/jbalvin',
+            spotify: 'https://open.spotify.com/artist/1vyhD5VmyZ7KMfW5gqLgo5',
+            youtube: 'https://youtube.com/c/JBalvinOfficial',
+            website: 'https://jbalvin.com',
+          },
+        },
+      },
+      'Update only name': {
+        value: {
+          name: 'New Artist Name',
+        },
+      },
+      'Update only bio': {
+        value: {
+          bio: 'New artist biography with updated information about their career and achievements.',
+        },
+      },
+      'Update only social links': {
+        value: {
+          socialLinks: {
+            instagram: 'https://instagram.com/newhandle',
+            spotify: 'https://open.spotify.com/artist/newid',
+          },
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Artist updated successfully' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateArtistDto: UpdateArtistDto,
@@ -248,6 +309,76 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Create a new release for the artist' })
   @ApiParam({ name: 'id', description: 'Artist UUID' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Release data with optional cover image',
+    schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          example: 'Vida Rockstar',
+          description: 'The title of the release',
+        },
+        type: {
+          type: 'string',
+          enum: ['SINGLE', 'EP', 'ALBUM', 'COMPILATION'],
+          example: 'ALBUM',
+          description: 'Type of release',
+        },
+        releaseDate: {
+          type: 'string',
+          format: 'date',
+          example: '2023-05-12',
+          description: 'Release date in ISO format (YYYY-MM-DD)',
+        },
+        songIds: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['song-id-1', 'song-id-2', 'song-id-3'],
+          description: 'Array of song IDs from the songs microservice',
+        },
+        cover: {
+          type: 'string',
+          format: 'binary',
+          description: 'Cover image file (optional)',
+        },
+      },
+      required: ['title', 'type', 'releaseDate'],
+    },
+    examples: {
+      albumWithCover: {
+        summary: 'Album with cover image',
+        description: 'Creating a full album with cover image and songs',
+        value: {
+          title: 'Vida Rockstar',
+          type: 'ALBUM',
+          releaseDate: '2023-05-12',
+          songIds: ['song-id-1', 'song-id-2', 'song-id-3'],
+          cover: '(binary file)',
+        },
+      },
+      singleRelease: {
+        summary: 'Single release',
+        description: 'Creating a single without cover image',
+        value: {
+          title: 'Mi Nuevo Single',
+          type: 'SINGLE',
+          releaseDate: '2024-01-15',
+          songIds: ['single-song-id'],
+        },
+      },
+      epRelease: {
+        summary: 'EP release',
+        description: 'Creating an EP with multiple songs',
+        value: {
+          title: 'Primeros Pasos EP',
+          type: 'EP',
+          releaseDate: '2024-02-20',
+          songIds: ['ep-song-1', 'ep-song-2', 'ep-song-3', 'ep-song-4'],
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Release created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
@@ -299,6 +430,69 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Update release information' })
   @ApiParam({ name: 'artistId', description: 'Artist UUID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiBody({
+    description: 'Release data to update (all fields optional)',
+    schema: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          example: 'Vida Rockstar (Deluxe Edition)',
+          description: 'Updated title of the release',
+        },
+        type: {
+          type: 'string',
+          enum: ['SINGLE', 'EP', 'ALBUM', 'COMPILATION'],
+          example: 'ALBUM',
+          description: 'Updated type of release',
+        },
+        releaseDate: {
+          type: 'string',
+          format: 'date',
+          example: '2023-06-15',
+          description: 'Updated release date in ISO format (YYYY-MM-DD)',
+        },
+        songIds: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['song-id-1', 'song-id-2', 'song-id-3', 'bonus-track-1'],
+          description: 'Updated array of song IDs',
+        },
+      },
+    },
+    examples: {
+      updateTitle: {
+        summary: 'Update title only',
+        description: 'Change only the release title',
+        value: {
+          title: 'Vida Rockstar (Deluxe Edition)',
+        },
+      },
+      updateMultipleFields: {
+        summary: 'Update multiple fields',
+        description: 'Update title, release date and add songs',
+        value: {
+          title: 'Vida Rockstar (Deluxe Edition)',
+          releaseDate: '2023-06-15',
+          songIds: [
+            'song-id-1',
+            'song-id-2',
+            'song-id-3',
+            'bonus-track-1',
+            'bonus-track-2',
+          ],
+        },
+      },
+      changeType: {
+        summary: 'Change release type',
+        description: 'Convert single to EP',
+        value: {
+          type: 'EP',
+          songIds: ['original-song', 'acoustic-version', 'remix'],
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Release updated successfully' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   updateRelease(
@@ -319,6 +513,29 @@ export class ArtistsController {
   @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'artistId', description: 'Artist UUID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiBody({
+    description: 'Cover image file to replace the current one',
+    schema: {
+      type: 'object',
+      properties: {
+        cover: {
+          type: 'string',
+          format: 'binary',
+          description: 'New cover image file (required)',
+        },
+      },
+      required: ['cover'],
+    },
+    examples: {
+      coverUpdate: {
+        summary: 'Update cover image',
+        description: 'Replace the current cover with a new image',
+        value: {
+          cover: '(binary file - JPEG, PNG, or WebP format)',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Cover updated successfully' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   async updateReleaseCover(
@@ -336,6 +553,37 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Add songs to release' })
   @ApiParam({ name: 'artistId', description: 'Artist UUID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiBody({
+    description: 'Song IDs to add to the release',
+    schema: {
+      type: 'object',
+      properties: {
+        songIds: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['new-song-1', 'new-song-2'],
+          description: 'Array of song IDs to add to the release',
+        },
+      },
+      required: ['songIds'],
+    },
+    examples: {
+      addSingleSong: {
+        summary: 'Add single song',
+        description: 'Add one song to the release',
+        value: {
+          songIds: ['bonus-track-id'],
+        },
+      },
+      addMultipleSongs: {
+        summary: 'Add multiple songs',
+        description: 'Add several songs to the release',
+        value: {
+          songIds: ['bonus-track-1', 'bonus-track-2', 'deluxe-song'],
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Songs added successfully' })
   addSongsToRelease(
     @Param('artistId', ParseUUIDPipe) artistId: string,
@@ -353,6 +601,37 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Remove songs from release' })
   @ApiParam({ name: 'artistId', description: 'Artist UUID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
+  @ApiBody({
+    description: 'Song IDs to remove from the release',
+    schema: {
+      type: 'object',
+      properties: {
+        songIds: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['song-to-remove-1', 'song-to-remove-2'],
+          description: 'Array of song IDs to remove from the release',
+        },
+      },
+      required: ['songIds'],
+    },
+    examples: {
+      removeSingleSong: {
+        summary: 'Remove single song',
+        description: 'Remove one song from the release',
+        value: {
+          songIds: ['unwanted-track-id'],
+        },
+      },
+      removeMultipleSongs: {
+        summary: 'Remove multiple songs',
+        description: 'Remove several songs from the release',
+        value: {
+          songIds: ['old-demo-1', 'old-demo-2', 'duplicate-track'],
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Songs removed successfully' })
   removeSongsFromRelease(
     @Param('artistId', ParseUUIDPipe) artistId: string,
