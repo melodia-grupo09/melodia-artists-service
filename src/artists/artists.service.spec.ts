@@ -224,15 +224,15 @@ describe('ArtistsService', () => {
     });
   });
 
-  describe('updateImage', () => {
-    it('should update artist image and return updated artist', async () => {
+  describe('updateMedia', () => {
+    it('should update artist image only and return updated artist', async () => {
       const newImageUrl = 'http://example.com/new-image.jpg';
       const updatedArtist = { ...mockArtist, imageUrl: newImageUrl };
 
       mockRepository.findOne.mockResolvedValue(mockArtist);
       mockRepository.save.mockResolvedValue(updatedArtist);
 
-      const result = await service.updateImage(mockArtist.id, newImageUrl);
+      const result = await service.updateMedia(mockArtist.id, newImageUrl);
 
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: mockArtist.id },
@@ -243,17 +243,19 @@ describe('ArtistsService', () => {
       });
       expect(result).toEqual(updatedArtist);
     });
-  });
 
-  describe('updateCover', () => {
-    it('should update artist cover and return updated artist', async () => {
+    it('should update artist cover only and return updated artist', async () => {
       const newCoverUrl = 'http://example.com/new-cover.jpg';
       const updatedArtist = { ...mockArtist, coverUrl: newCoverUrl };
 
       mockRepository.findOne.mockResolvedValue(mockArtist);
       mockRepository.save.mockResolvedValue(updatedArtist);
 
-      const result = await service.updateCover(mockArtist.id, newCoverUrl);
+      const result = await service.updateMedia(
+        mockArtist.id,
+        undefined,
+        newCoverUrl,
+      );
 
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: mockArtist.id },
@@ -263,6 +265,48 @@ describe('ArtistsService', () => {
         coverUrl: newCoverUrl,
       });
       expect(result).toEqual(updatedArtist);
+    });
+
+    it('should update both image and cover and return updated artist', async () => {
+      const newImageUrl = 'http://example.com/new-image.jpg';
+      const newCoverUrl = 'http://example.com/new-cover.jpg';
+      const updatedArtist = {
+        ...mockArtist,
+        imageUrl: newImageUrl,
+        coverUrl: newCoverUrl,
+      };
+
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue(updatedArtist);
+
+      const result = await service.updateMedia(
+        mockArtist.id,
+        newImageUrl,
+        newCoverUrl,
+      );
+
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: mockArtist.id },
+      });
+      expect(repository.save).toHaveBeenCalledWith({
+        ...mockArtist,
+        imageUrl: newImageUrl,
+        coverUrl: newCoverUrl,
+      });
+      expect(result).toEqual(updatedArtist);
+    });
+
+    it('should not update anything when no URLs provided', async () => {
+      mockRepository.findOne.mockResolvedValue(mockArtist);
+      mockRepository.save.mockResolvedValue(mockArtist);
+
+      const result = await service.updateMedia(mockArtist.id);
+
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: mockArtist.id },
+      });
+      expect(repository.save).toHaveBeenCalledWith(mockArtist);
+      expect(result).toEqual(mockArtist);
     });
   });
 

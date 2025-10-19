@@ -8,10 +8,14 @@ import {
   Delete,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileInterceptor,
+  FileFieldsInterceptor,
+} from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -27,7 +31,6 @@ import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { CreateArtistWithFileDto } from './dto/create-artist-with-file.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
-import { UpdateBioDto } from './dto/update-bio.dto';
 import { CreateReleaseDto } from '../releases/dto/create-release.dto';
 import { UpdateReleaseDto } from '../releases/dto/update-release.dto';
 import { ReleaseType } from '../releases/entities/release.entity';
@@ -66,7 +69,7 @@ export class ArtistsController {
           file,
           'artists',
         );
-        return this.artistsService.updateImage(artist.id, imageUrl);
+        return this.artistsService.updateMedia(artist.id, imageUrl);
       }
 
       return artist;
@@ -97,46 +100,58 @@ export class ArtistsController {
     return this.artistsService.update(id, updateArtistDto);
   }
 
-  @Patch(':id/bio')
-  @ApiOperation({ summary: 'Update artist bio and social links' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
-  @ApiResponse({ status: 200, description: 'Bio updated successfully' })
-  @ApiResponse({ status: 404, description: 'Artist not found' })
-  updateBio(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateBioDto: UpdateBioDto,
-  ) {
-    return this.artistsService.update(id, updateBioDto);
-  }
-
-  @Patch(':id/image')
-  @UseInterceptors(FileInterceptor('image'))
-  @ApiOperation({ summary: 'Update artist profile image' })
+  @Patch(':id/media')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'image', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ]),
+  )
+  @ApiOperation({ summary: 'Update artist media (profile image and/or cover)' })
   @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'id', description: 'Artist UUID' })
-  @ApiResponse({ status: 200, description: 'Image updated successfully' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Artist profile image',
+        },
+        cover: {
+          type: 'string',
+          format: 'binary',
+          description: 'Artist cover image',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Media updated successfully' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  async updateImage(
+  async updateMedia(
     @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: { image?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ) {
-    const imageUrl = await this.fileUploadService.uploadFile(file, 'artists');
-    return this.artistsService.updateImage(id, imageUrl);
-  }
+    let imageUrl: string | undefined;
+    let coverUrl: string | undefined;
 
-  @Patch(':id/cover')
-  @UseInterceptors(FileInterceptor('cover'))
-  @ApiOperation({ summary: 'Update artist cover image' })
-  @ApiConsumes('multipart/form-data')
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
-  @ApiResponse({ status: 200, description: 'Cover updated successfully' })
-  @ApiResponse({ status: 404, description: 'Artist not found' })
-  async updateCover(
-    @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    const coverUrl = await this.fileUploadService.uploadFile(file, 'artists');
-    return this.artistsService.updateCover(id, coverUrl);
+    if (files?.image?.[0]) {
+      imageUrl = await this.fileUploadService.uploadFile(
+        files.image[0],
+        'artists',
+      );
+    }
+
+    if (files?.cover?.[0]) {
+      coverUrl = await this.fileUploadService.uploadFile(
+        files.cover[0],
+        'artists',
+      );
+    }
+
+    return this.artistsService.updateMedia(id, imageUrl, coverUrl);
   }
 
   @Get(':id/releases')

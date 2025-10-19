@@ -62,15 +62,21 @@ export class ArtistsService {
     return this.artistsRepository.save(artist);
   }
 
-  async updateImage(id: string, imageUrl: string): Promise<Artist> {
+  async updateMedia(
+    id: string,
+    imageUrl?: string,
+    coverUrl?: string,
+  ): Promise<Artist> {
     const artist = await this.findOne(id);
-    artist.imageUrl = imageUrl;
-    return this.artistsRepository.save(artist);
-  }
 
-  async updateCover(id: string, coverUrl: string): Promise<Artist> {
-    const artist = await this.findOne(id);
-    artist.coverUrl = coverUrl;
+    if (imageUrl) {
+      artist.imageUrl = imageUrl;
+    }
+
+    if (coverUrl) {
+      artist.coverUrl = coverUrl;
+    }
+
     return this.artistsRepository.save(artist);
   }
 
