@@ -32,6 +32,7 @@ describe('ArtistsController', () => {
     update: jest.fn(),
     updateMedia: jest.fn(),
     remove: jest.fn(),
+    search: jest.fn(),
   };
 
   const mockFileUploadService = {
@@ -81,6 +82,65 @@ describe('ArtistsController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe('searchArtists', () => {
+    const mockSearchResults = [
+      {
+        id: '1',
+        name: 'Test Artist',
+        imageUrl: 'http://example.com/image.jpg',
+        coverUrl: 'http://example.com/cover.jpg',
+        followersCount: 1000,
+        bio: 'Test bio',
+        socialLinks: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      },
+    ];
+
+    it('should return artists matching the search query', async () => {
+      mockArtistsService.search.mockResolvedValue(mockSearchResults);
+
+      const result = await controller.searchArtists('Test', 1, 20);
+
+      expect(result).toEqual(mockSearchResults);
+      expect(artistsService.search).toHaveBeenCalledWith('Test', 20, 1);
+    });
+
+    it('should use default pagination values', async () => {
+      mockArtistsService.search.mockResolvedValue(mockSearchResults);
+
+      const result = await controller.searchArtists('Test', 1, 20);
+
+      expect(result).toEqual(mockSearchResults);
+      expect(artistsService.search).toHaveBeenCalledWith('Test', 20, 1);
+    });
+
+    it('should throw BadRequestException when query is missing', async () => {
+      await expect(controller.searchArtists('', 1, 20)).rejects.toThrow(
+        'Query parameter is required',
+      );
+    });
+
+    it('should throw BadRequestException when page is less than 1', async () => {
+      await expect(controller.searchArtists('Test', 0, 20)).rejects.toThrow(
+        'Page must be greater than 0',
+      );
+    });
+
+    it('should throw BadRequestException when limit is less than 1', async () => {
+      await expect(controller.searchArtists('Test', 1, 0)).rejects.toThrow(
+        'Limit must be between 1 and 100',
+      );
+    });
+
+    it('should throw BadRequestException when limit is greater than 100', async () => {
+      await expect(controller.searchArtists('Test', 1, 101)).rejects.toThrow(
+        'Limit must be between 1 and 100',
+      );
+    });
   });
 
   describe('create', () => {

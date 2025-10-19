@@ -11,6 +11,9 @@ import {
   UploadedFiles,
   ParseUUIDPipe,
   Query,
+  DefaultValuePipe,
+  ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   FileInterceptor,
@@ -43,6 +46,49 @@ export class ArtistsController {
     private readonly fileUploadService: FileUploadService,
     private readonly releasesService: ReleasesService,
   ) {}
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search artists by name or bio' })
+  @ApiQuery({
+    name: 'query',
+    required: true,
+    description: 'Search query for artists',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number for pagination',
+    schema: { default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Number of results per page',
+    schema: { default: 20 },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Artists found matching the search query',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid parameters' })
+  async searchArtists(
+    @Query('query') query: string,
+    @Query('page', new DefaultValuePipe(1), new ParseIntPipe()) page: number,
+    @Query('limit', new DefaultValuePipe(20), new ParseIntPipe())
+    limit: number,
+  ) {
+    if (!query) {
+      throw new BadRequestException('Query parameter is required');
+    }
+    if (page < 1) {
+      throw new BadRequestException('Page must be greater than 0');
+    }
+    if (limit < 1 || limit > 100) {
+      throw new BadRequestException('Limit must be between 1 and 100');
+    }
+
+    return this.artistsService.search(query, limit, page);
+  }
 
   @Post()
   @UseInterceptors(FileInterceptor('image'))

@@ -28,6 +28,7 @@ describe('ArtistsService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    findAndCount: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -329,6 +330,71 @@ describe('ArtistsService', () => {
       await expect(service.remove('non-existent-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('search', () => {
+    const mockSearchResults: Artist[] = [
+      {
+        id: '1',
+        name: 'Test Artist',
+        imageUrl: 'http://example.com/image.jpg',
+        coverUrl: 'http://example.com/cover.jpg',
+        followersCount: 1000,
+        bio: 'Test bio',
+        socialLinks: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      },
+      {
+        id: '2',
+        name: 'Another Artist',
+        imageUrl: 'http://example.com/image2.jpg',
+        coverUrl: 'http://example.com/cover2.jpg',
+        followersCount: 500,
+        bio: 'Another bio',
+        socialLinks: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        releases: [],
+      },
+    ];
+
+    it('should return artists matching the search query', async () => {
+      mockRepository.findAndCount.mockResolvedValue([mockSearchResults, 2]);
+
+      const result = await service.search('Test', 20, 1);
+
+      expect(repository.findAndCount).toHaveBeenCalled();
+      expect(result).toEqual(mockSearchResults);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should handle pagination correctly', async () => {
+      mockRepository.findAndCount.mockResolvedValue([
+        [mockSearchResults[0]],
+        1,
+      ]);
+
+      const result = await service.search('Artist', 1, 2);
+
+      expect(repository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 1,
+          skip: 1,
+        }),
+      );
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty array when no artists match', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.search('NonExistent', 20, 1);
+
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 });

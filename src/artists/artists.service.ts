@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Artist } from './entities/artist.entity';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
@@ -83,5 +83,21 @@ export class ArtistsService {
   async remove(id: string): Promise<void> {
     const artist = await this.findOne(id);
     await this.artistsRepository.remove(artist);
+  }
+
+  async search(query: string, limit: number, page: number): Promise<Artist[]> {
+    const skip = (page - 1) * limit;
+
+    const [artists] = await this.artistsRepository.findAndCount({
+      where: [{ name: ILike(`%${query}%`) }, { bio: ILike(`%${query}%`) }],
+      take: limit,
+      skip: skip,
+      order: {
+        followersCount: 'DESC',
+        name: 'ASC',
+      },
+    });
+
+    return artists;
   }
 }
