@@ -2,7 +2,6 @@ import {
   IsString,
   IsEnum,
   IsDateString,
-  IsUUID,
   IsArray,
   IsOptional,
 } from 'class-validator';
@@ -43,10 +42,12 @@ export class CreateReleaseDto {
 
   @ApiProperty({
     description: 'Artist ID who owns this release',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: 'user-12345-test-67890',
+    required: false,
   })
-  @IsUUID()
-  artistId: string;
+  @IsOptional()
+  @IsString()
+  artistId?: string;
 
   @ApiProperty({
     description: 'Array of song IDs from the songs microservice',

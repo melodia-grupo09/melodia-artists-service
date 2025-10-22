@@ -100,6 +100,7 @@ export class ArtistsController {
     examples: {
       'Create artist with all data': {
         value: {
+          id: '8c66f123-bca6-4e80-a09f-c60b4e9534e4',
           name: 'Bad Bunny',
           bio: 'Puerto Rican rapper, singer, and songwriter. He is known for his deep, slurred vocal style and his eclectic fashion sense.',
           socialLinks:
@@ -109,11 +110,13 @@ export class ArtistsController {
       },
       'Create artist with minimal data': {
         value: {
+          id: '8c66f123-bca6-4e80-a09f-c60b4e9534e4',
           name: 'New Artist',
         },
       },
       'Create artist with social links only': {
         value: {
+          id: '8c66f123-bca6-4e80-a09f-c60b4e9534e4',
           name: 'Rosalía',
           socialLinks:
             '{"instagram":"https://instagram.com/rosalia.vt","spotify":"https://open.spotify.com/artist/7ltDVBr6mKbRvohxheJ9h1"}',
@@ -133,6 +136,7 @@ export class ArtistsController {
     try {
       // Extract only the valid CreateArtistDto fields, ignore 'image' field
       const createArtistDto: CreateArtistDto = {
+        id: body.id as string,
         name: body.name as string,
         bio: body.bio as string | undefined,
         socialLinks: body.socialLinks
@@ -161,16 +165,16 @@ export class ArtistsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get artist by ID' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiResponse({ status: 200, description: 'Artist found' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id') id: string) {
     return this.artistsService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update artist information' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiBody({
     type: UpdateArtistDto,
     description: 'Artist data to update (all fields are optional)',
@@ -198,23 +202,12 @@ export class ArtistsController {
           bio: 'New artist biography with updated information about their career and achievements.',
         },
       },
-      'Update only social links': {
-        value: {
-          socialLinks: {
-            instagram: 'https://instagram.com/newhandle',
-            spotify: 'https://open.spotify.com/artist/newid',
-          },
-        },
-      },
     },
   })
   @ApiResponse({ status: 200, description: 'Artist updated successfully' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateArtistDto: UpdateArtistDto,
-  ) {
+  update(@Param('id') id: string, @Body() updateArtistDto: UpdateArtistDto) {
     return this.artistsService.update(id, updateArtistDto);
   }
 
@@ -227,7 +220,7 @@ export class ArtistsController {
   )
   @ApiOperation({ summary: 'Update artist media (profile image and/or cover)' })
   @ApiConsumes('multipart/form-data')
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -248,7 +241,7 @@ export class ArtistsController {
   @ApiResponse({ status: 200, description: 'Media updated successfully' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   async updateMedia(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @UploadedFiles()
     files: { image?: Express.Multer.File[]; cover?: Express.Multer.File[] },
   ) {
@@ -274,23 +267,23 @@ export class ArtistsController {
 
   @Get(':id/releases')
   @ApiOperation({ summary: 'Get artist releases (discography)' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiQuery({
     name: 'type',
     required: false,
     enum: ReleaseType,
-    description: 'Filter by release type',
+    description: 'Filter releases by type',
   })
   @ApiQuery({
     name: 'withLatestFlag',
     required: false,
     type: Boolean,
-    description: 'Include isLatest flag for each release',
+    description: 'Include latest flag for each release',
   })
   @ApiResponse({ status: 200, description: 'Artist releases found' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   getArtistReleases(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Query('type') type?: ReleaseType,
     @Query('withLatestFlag') withLatestFlag?: boolean,
   ) {
@@ -307,7 +300,7 @@ export class ArtistsController {
   @Post(':id/releases')
   @UseInterceptors(FileInterceptor('cover'))
   @ApiOperation({ summary: 'Create a new release for the artist' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Release data with optional cover image',
@@ -383,7 +376,7 @@ export class ArtistsController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
   async createRelease(
-    @Param('id', ParseUUIDPipe) artistId: string,
+    @Param('id') artistId: string,
     @Body() createReleaseDto: CreateReleaseDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
@@ -415,12 +408,12 @@ export class ArtistsController {
 
   @Get(':artistId/releases/:releaseId')
   @ApiOperation({ summary: 'Get specific release by artist and release ID' })
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiResponse({ status: 200, description: 'Release found' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   getArtistRelease(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
   ) {
     return this.releasesService.findOneByArtist(artistId, releaseId);
@@ -428,7 +421,7 @@ export class ArtistsController {
 
   @Patch(':artistId/releases/:releaseId')
   @ApiOperation({ summary: 'Update release information' })
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiBody({
     description: 'Release data to update (all fields optional)',
@@ -496,7 +489,7 @@ export class ArtistsController {
   @ApiResponse({ status: 200, description: 'Release updated successfully' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   updateRelease(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
     @Body() updateReleaseDto: UpdateReleaseDto,
   ) {
@@ -511,7 +504,7 @@ export class ArtistsController {
   @UseInterceptors(FileInterceptor('cover'))
   @ApiOperation({ summary: 'Update release cover image' })
   @ApiConsumes('multipart/form-data')
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiBody({
     description: 'Cover image file to replace the current one',
@@ -539,7 +532,7 @@ export class ArtistsController {
   @ApiResponse({ status: 200, description: 'Cover updated successfully' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   async updateReleaseCover(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
@@ -551,7 +544,7 @@ export class ArtistsController {
 
   @Patch(':artistId/releases/:releaseId/songs/add')
   @ApiOperation({ summary: 'Add songs to release' })
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiBody({
     description: 'Song IDs to add to the release',
@@ -586,7 +579,7 @@ export class ArtistsController {
   })
   @ApiResponse({ status: 200, description: 'Songs added successfully' })
   addSongsToRelease(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
     @Body() body: { songIds: string[] },
   ) {
@@ -599,7 +592,7 @@ export class ArtistsController {
 
   @Patch(':artistId/releases/:releaseId/songs/remove')
   @ApiOperation({ summary: 'Remove songs from release' })
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiBody({
     description: 'Song IDs to remove from the release',
@@ -634,7 +627,7 @@ export class ArtistsController {
   })
   @ApiResponse({ status: 200, description: 'Songs removed successfully' })
   removeSongsFromRelease(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
     @Body() body: { songIds: string[] },
   ) {
@@ -647,12 +640,12 @@ export class ArtistsController {
 
   @Delete(':artistId/releases/:releaseId')
   @ApiOperation({ summary: 'Delete release' })
-  @ApiParam({ name: 'artistId', description: 'Artist UUID' })
+  @ApiParam({ name: 'artistId', description: 'Artist ID' })
   @ApiParam({ name: 'releaseId', description: 'Release UUID' })
   @ApiResponse({ status: 200, description: 'Release deleted successfully' })
   @ApiResponse({ status: 404, description: 'Release or artist not found' })
   removeRelease(
-    @Param('artistId', ParseUUIDPipe) artistId: string,
+    @Param('artistId') artistId: string,
     @Param('releaseId', ParseUUIDPipe) releaseId: string,
   ) {
     return this.releasesService.removeByArtist(artistId, releaseId);
@@ -660,34 +653,34 @@ export class ArtistsController {
 
   @Patch(':id/follow')
   @ApiOperation({ summary: 'Follow artist (increment followers count)' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiResponse({
     status: 200,
     description: 'Follower count incremented successfully',
   })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  followArtist(@Param('id', ParseUUIDPipe) id: string) {
+  followArtist(@Param('id') id: string) {
     return this.artistsService.incrementFollowers(id);
   }
 
   @Patch(':id/unfollow')
   @ApiOperation({ summary: 'Unfollow artist (decrement followers count)' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiResponse({
     status: 200,
     description: 'Follower count decremented successfully',
   })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  unfollowArtist(@Param('id', ParseUUIDPipe) id: string) {
+  unfollowArtist(@Param('id') id: string) {
     return this.artistsService.decrementFollowers(id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete artist' })
-  @ApiParam({ name: 'id', description: 'Artist UUID' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiResponse({ status: 200, description: 'Artist deleted successfully' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id') id: string) {
     return this.artistsService.remove(id);
   }
 }

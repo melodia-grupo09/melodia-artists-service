@@ -57,6 +57,7 @@ describe('ArtistsService', () => {
   describe('create', () => {
     it('should create and return an artist', async () => {
       const createArtistDto: CreateArtistDto = {
+        id: 'test-artist-id-123',
         name: 'Test Artist',
       };
 
@@ -66,6 +67,10 @@ describe('ArtistsService', () => {
 
       const result = await service.create(createArtistDto);
 
+      // Should check both ID and name for duplicates
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: createArtistDto.id },
+      });
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { name: createArtistDto.name },
       });
@@ -74,12 +79,53 @@ describe('ArtistsService', () => {
       expect(result).toEqual(mockArtist);
     });
 
-    it('should throw BadRequestException when artist with same name already exists', async () => {
+    it('should throw BadRequestException when artist with same ID already exists', async () => {
       const createArtistDto: CreateArtistDto = {
+        id: 'existing-artist-id',
         name: 'Test Artist',
       };
 
-      mockRepository.findOne.mockResolvedValue(mockArtist);
+      // Mock to return existing artist when checking for ID
+      mockRepository.findOne.mockImplementation((options: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (options.where.id) {
+          return Promise.resolve(mockArtist); // ID already exists
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(service.create(createArtistDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.create(createArtistDto)).rejects.toThrow(
+        `Artist with ID '${createArtistDto.id}' already exists`,
+      );
+
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: createArtistDto.id },
+      });
+      expect(repository.create).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when artist with same name already exists', async () => {
+      const createArtistDto: CreateArtistDto = {
+        id: 'new-artist-id',
+        name: 'Test Artist',
+      };
+
+      // Mock to return null for ID check but existing artist for name check
+      mockRepository.findOne.mockImplementation((options: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (options.where.id) {
+          return Promise.resolve(null); // ID is new
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (options.where.name) {
+          return Promise.resolve(mockArtist); // Name already exists
+        }
+        return Promise.resolve(null);
+      });
 
       await expect(service.create(createArtistDto)).rejects.toThrow(
         BadRequestException,
@@ -88,6 +134,9 @@ describe('ArtistsService', () => {
         `Artist with name '${createArtistDto.name}' already exists`,
       );
 
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { id: createArtistDto.id },
+      });
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { name: createArtistDto.name },
       });

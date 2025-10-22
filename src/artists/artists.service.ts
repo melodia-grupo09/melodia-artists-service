@@ -17,11 +17,23 @@ export class ArtistsService {
   ) {}
 
   async create(createArtistDto: CreateArtistDto): Promise<Artist> {
-    const existingArtist = await this.artistsRepository.findOne({
+    // Check if artist with this ID already exists
+    const existingArtistById = await this.artistsRepository.findOne({
+      where: { id: createArtistDto.id },
+    });
+
+    if (existingArtistById) {
+      throw new BadRequestException(
+        `Artist with ID '${createArtistDto.id}' already exists`,
+      );
+    }
+
+    // Check if artist with this name already exists
+    const existingArtistByName = await this.artistsRepository.findOne({
       where: { name: createArtistDto.name },
     });
 
-    if (existingArtist) {
+    if (existingArtistByName) {
       throw new BadRequestException(
         `Artist with name '${createArtistDto.name}' already exists`,
       );

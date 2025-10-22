@@ -1,7 +1,7 @@
 import {
   Entity,
   Column,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
@@ -10,7 +10,7 @@ import { Release } from '../../releases/entities/release.entity';
 
 @Entity('artists')
 export class Artist {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('varchar')
   id: string;
 
   @Column({ type: 'varchar', length: 255, unique: true })

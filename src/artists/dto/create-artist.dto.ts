@@ -59,6 +59,13 @@ class SocialLinksDto {
 
 export class CreateArtistDto {
   @ApiProperty({
+    description: 'The ID of the artist (should match the user ID)',
+    example: 'user-123-456',
+  })
+  @IsString()
+  id: string;
+
+  @ApiProperty({
     description: 'The name of the artist',
     example: 'Bruno Mars',
   })

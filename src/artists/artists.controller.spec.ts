@@ -147,13 +147,17 @@ describe('ArtistsController', () => {
 
   describe('create', () => {
     const createArtistDto: CreateArtistDto = {
+      id: 'test-artist-id-123',
       name: 'Test Artist',
     };
 
     it('should create an artist without image', async () => {
       mockArtistsService.create.mockResolvedValue(mockArtist);
 
-      const result = await controller.create(createArtistDto, undefined);
+      const result = await controller.create(
+        createArtistDto as unknown as Record<string, unknown>,
+        undefined,
+      );
 
       expect(result).toEqual(mockArtist);
       expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
@@ -172,7 +176,10 @@ describe('ArtistsController', () => {
       mockArtistsService.create.mockResolvedValue(mockArtist);
       mockArtistsService.updateMedia.mockResolvedValue(mockArtist);
 
-      const result = await controller.create(createArtistDto, mockFile);
+      const result = await controller.create(
+        createArtistDto as unknown as Record<string, unknown>,
+        mockFile,
+      );
 
       expect(result).toEqual(mockArtist);
       expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
@@ -191,7 +198,10 @@ describe('ArtistsController', () => {
       mockArtistsService.create.mockRejectedValue(error);
 
       await expect(
-        controller.create(createArtistDto, undefined),
+        controller.create(
+          createArtistDto as unknown as Record<string, unknown>,
+          undefined,
+        ),
       ).rejects.toThrow('Database error');
       expect(artistsService.create).toHaveBeenCalledWith(createArtistDto);
     });
@@ -208,7 +218,10 @@ describe('ArtistsController', () => {
       mockFileUploadService.uploadFile.mockRejectedValue(error);
 
       await expect(
-        controller.create(createArtistDto, mockFile),
+        controller.create(
+          createArtistDto as unknown as Record<string, unknown>,
+          mockFile,
+        ),
       ).rejects.toThrow('Upload failed');
     });
   });
