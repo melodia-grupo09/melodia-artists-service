@@ -17,8 +17,10 @@ export class CreateReleaseDto {
   title: string;
 
   @ApiProperty({
-    description: 'Type of release',
+    description:
+      'Type of release. Possible values: "album" (full-length album), "single" (single song release), "ep" (extended play - shorter than album)',
     enum: ReleaseType,
+    enumName: 'ReleaseType',
     example: ReleaseType.ALBUM,
   })
   @IsEnum(ReleaseType)

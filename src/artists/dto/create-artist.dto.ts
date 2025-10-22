@@ -84,6 +84,13 @@ export class CreateArtistDto {
   @ApiPropertyOptional({
     description: 'Social media links for the artist',
     type: SocialLinksDto,
+    example: {
+      instagram: 'https://instagram.com/brunomars',
+      twitter: 'https://twitter.com/brunomars',
+      spotify: 'https://open.spotify.com/artist/1URnnhqYAYcrqrcwql10ft',
+      youtube: 'https://youtube.com/brunomars',
+      website: 'https://brunomars.com',
+    },
   })
   @IsOptional()
   @IsObject()
