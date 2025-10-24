@@ -433,4 +433,186 @@ describe('ReleasesService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('findOneByArtist', () => {
+    it('should return a release when found by artist and release ID', async () => {
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+
+      const result = await service.findOneByArtist(
+        mockRelease.artistId,
+        mockRelease.id,
+      );
+
+      expect(result).toEqual(mockRelease);
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: mockRelease.id, artistId: mockRelease.artistId },
+        relations: ['artist'],
+      });
+    });
+
+    it('should throw NotFoundException when release not found for artist', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findOneByArtist(mockRelease.artistId, mockRelease.id),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.findOneByArtist(mockRelease.artistId, mockRelease.id),
+      ).rejects.toThrow(
+        `Release with ID ${mockRelease.id} not found for artist ${mockRelease.artistId}`,
+      );
+    });
+  });
+
+  describe('updateByArtist', () => {
+    it('should update a release by artist', async () => {
+      const updateDto = { title: 'Updated Album Title' };
+      const updatedRelease = { ...mockRelease, ...updateDto };
+
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockRelease) // findOneByArtist call
+        .mockResolvedValueOnce(null); // duplicate check call
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.updateByArtist(
+        mockRelease.artistId,
+        mockRelease.id,
+        updateDto,
+      );
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException when updating to duplicate title for same artist', async () => {
+      const updateDto = { title: 'Existing Album Title' };
+      const existingRelease = {
+        id: 'different-id',
+        title: 'Existing Album Title',
+        artistId: mockRelease.artistId,
+      };
+
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockRelease) // findOneByArtist call
+        .mockResolvedValueOnce(existingRelease); // duplicate check call
+
+      await expect(
+        service.updateByArtist(mockRelease.artistId, mockRelease.id, updateDto),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should update with date conversion', async () => {
+      const updateDto = { releaseDate: '2024-01-01' };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      await service.updateByArtist(
+        mockRelease.artistId,
+        mockRelease.id,
+        updateDto,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('addSongsByArtist', () => {
+    it('should add songs to release by artist', async () => {
+      const newSongs = ['song3', 'song4'];
+      const freshMockRelease = {
+        ...mockRelease,
+        songIds: ['song1', 'song2'], // Reset to original state
+      };
+      const updatedRelease = {
+        ...freshMockRelease,
+        songIds: [...freshMockRelease.songIds, ...newSongs],
+      };
+
+      mockRepository.findOne.mockResolvedValue(freshMockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.addSongsByArtist(
+        freshMockRelease.artistId,
+        freshMockRelease.id,
+        newSongs,
+      );
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalledWith({
+        ...freshMockRelease,
+        songIds: ['song1', 'song2', 'song3', 'song4'],
+      });
+    });
+
+    it('should not add duplicate songs', async () => {
+      const duplicateSongs = ['song1', 'song3'];
+      const expectedSongIds = ['song1', 'song2', 'song3'];
+      const freshMockRelease = {
+        ...mockRelease,
+        songIds: ['song1', 'song2'], // Reset to original state
+      };
+
+      mockRepository.findOne.mockResolvedValue(freshMockRelease);
+      mockRepository.save.mockResolvedValue({
+        ...freshMockRelease,
+        songIds: expectedSongIds,
+      });
+
+      await service.addSongsByArtist(
+        freshMockRelease.artistId,
+        freshMockRelease.id,
+        duplicateSongs,
+      );
+
+      expect(mockRepository.save).toHaveBeenCalledWith({
+        ...freshMockRelease,
+        songIds: expectedSongIds,
+      });
+    });
+  });
+
+  describe('removeSongsByArtist', () => {
+    it('should remove songs from release by artist', async () => {
+      const songsToRemove = ['song1'];
+      const freshMockRelease = {
+        ...mockRelease,
+        songIds: ['song1', 'song2'], // Reset to original state
+      };
+      const updatedRelease = {
+        ...freshMockRelease,
+        songIds: ['song2'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(freshMockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.removeSongsByArtist(
+        freshMockRelease.artistId,
+        freshMockRelease.id,
+        songsToRemove,
+      );
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalledWith({
+        ...freshMockRelease,
+        songIds: ['song2'],
+      });
+    });
+  });
+
+  describe('removeByArtist', () => {
+    it('should remove a release by artist', async () => {
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.remove.mockResolvedValue(undefined);
+
+      await service.removeByArtist(mockRelease.artistId, mockRelease.id);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { id: mockRelease.id, artistId: mockRelease.artistId },
+        relations: ['artist'],
+      });
+      expect(mockRepository.remove).toHaveBeenCalledWith(mockRelease);
+    });
+  });
 });
