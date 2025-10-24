@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConflictException } from '@nestjs/common';
 import { ArtistsController } from './artists.controller';
 import { ArtistsService } from './artists.service';
 import { FileUploadService } from '../upload/file-upload.service';
@@ -607,6 +608,31 @@ describe('ArtistsController', () => {
           mockFile,
         ),
       ).rejects.toThrow('File upload failed');
+    });
+
+    it('should throw ConflictException when creating a release with duplicate title for same artist', async () => {
+      const createReleaseDto = {
+        title: 'Duplicate Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+      };
+
+      const conflictError = new ConflictException(
+        'A release with the title "Duplicate Album" already exists for this artist',
+      );
+
+      mockArtistsService.findOne.mockResolvedValue(mockArtist);
+      mockReleasesService.create.mockRejectedValue(conflictError);
+
+      await expect(
+        controller.createRelease(mockArtist.id, createReleaseDto as any),
+      ).rejects.toThrow(ConflictException);
+
+      expect(mockArtistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
+      expect(mockReleasesService.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        artistId: mockArtist.id,
+      });
     });
   });
 

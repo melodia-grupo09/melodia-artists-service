@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Release, ReleaseType } from './entities/release.entity';
@@ -13,6 +17,20 @@ export class ReleasesService {
   ) {}
 
   async create(createReleaseDto: CreateReleaseDto): Promise<Release> {
+    // Check if a release with the same title already exists for this artist
+    const existingRelease = await this.releasesRepository.findOne({
+      where: {
+        title: createReleaseDto.title,
+        artistId: createReleaseDto.artistId,
+      },
+    });
+
+    if (existingRelease) {
+      throw new ConflictException(
+        `A release with the title "${createReleaseDto.title}" already exists for this artist`,
+      );
+    }
+
     const release = this.releasesRepository.create({
       ...createReleaseDto,
       releaseDate: new Date(createReleaseDto.releaseDate),
@@ -107,6 +125,22 @@ export class ReleasesService {
   ): Promise<Release> {
     const release = await this.findOne(id);
 
+    // Check if the title is being updated and if it conflicts with existing releases
+    if (updateReleaseDto.title && updateReleaseDto.title !== release.title) {
+      const existingRelease = await this.releasesRepository.findOne({
+        where: {
+          title: updateReleaseDto.title,
+          artistId: release.artistId,
+        },
+      });
+
+      if (existingRelease && existingRelease.id !== id) {
+        throw new ConflictException(
+          `A release with the title "${updateReleaseDto.title}" already exists for this artist`,
+        );
+      }
+    }
+
     const updateData: UpdateReleaseDto = { ...updateReleaseDto };
     if (updateReleaseDto.releaseDate) {
       updateData.releaseDate = new Date(
@@ -157,6 +191,22 @@ export class ReleasesService {
     updateReleaseDto: UpdateReleaseDto,
   ): Promise<Release> {
     const release = await this.findOneByArtist(artistId, releaseId);
+
+    // Check if the title is being updated and if it conflicts with existing releases
+    if (updateReleaseDto.title && updateReleaseDto.title !== release.title) {
+      const existingRelease = await this.releasesRepository.findOne({
+        where: {
+          title: updateReleaseDto.title,
+          artistId: artistId,
+        },
+      });
+
+      if (existingRelease && existingRelease.id !== releaseId) {
+        throw new ConflictException(
+          `A release with the title "${updateReleaseDto.title}" already exists for this artist`,
+        );
+      }
+    }
 
     const updateData: UpdateReleaseDto = { ...updateReleaseDto };
     if (updateReleaseDto.releaseDate) {

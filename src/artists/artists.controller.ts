@@ -375,6 +375,11 @@ export class ArtistsController {
   @ApiResponse({ status: 201, description: 'Release created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Artist not found' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Conflict - A release with the same title already exists for this artist',
+  })
   async createRelease(
     @Param('id') artistId: string,
     @Body() createReleaseDto: CreateReleaseDto,

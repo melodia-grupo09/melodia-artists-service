@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Unique,
 } from 'typeorm';
 import { Artist } from '../../artists/entities/artist.entity';
 
@@ -16,6 +17,7 @@ export enum ReleaseType {
 }
 
 @Entity('releases')
+@Unique(['title', 'artistId'])
 export class Release {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
 import { ReleasesService } from './releases.service';
 import { Release, ReleaseType } from './entities/release.entity';
 
@@ -95,6 +95,66 @@ describe('ReleasesService', () => {
         releaseDate: new Date(createReleaseDto.releaseDate),
         songIds: [],
       });
+    });
+
+    it('should throw ConflictException when creating a release with duplicate title for same artist', async () => {
+      const createReleaseDto = {
+        title: 'Duplicate Album',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+      };
+
+      const existingRelease = {
+        id: 'existing-123',
+        title: 'Duplicate Album',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+      };
+
+      // Mock findOne to return existing release (meaning duplicate found)
+      mockRepository.findOne.mockResolvedValue(existingRelease);
+
+      await expect(service.create(createReleaseDto)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.create(createReleaseDto)).rejects.toThrow(
+        'A release with the title "Duplicate Album" already exists for this artist',
+      );
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          title: createReleaseDto.title,
+          artistId: createReleaseDto.artistId,
+        },
+      });
+      expect(mockRepository.create).not.toHaveBeenCalled();
+      expect(mockRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should create a release when title exists for different artist', async () => {
+      const createReleaseDto = {
+        title: 'Same Title Different Artist',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+      };
+
+      // Mock findOne to return null (no duplicate for this artist)
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockReturnValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      const result = await service.create(createReleaseDto);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          title: createReleaseDto.title,
+          artistId: createReleaseDto.artistId,
+        },
+      });
+      expect(mockRepository.create).toHaveBeenCalled();
+      expect(mockRepository.save).toHaveBeenCalled();
+      expect(result).toEqual(mockRelease);
     });
   });
 
@@ -202,6 +262,65 @@ describe('ReleasesService', () => {
       await service.update(mockRelease.id, updateDto);
 
       expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException when updating to duplicate title for same artist', async () => {
+      const updateDto = { title: 'Existing Album Title' };
+      const existingRelease = {
+        id: 'different-id',
+        title: 'Existing Album Title',
+        artistId: mockRelease.artistId,
+      };
+
+      // First call to findOne returns the current release being updated
+      // Second call to findOne returns the existing release with same title
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockRelease)
+        .mockResolvedValueOnce(existingRelease);
+
+      await expect(service.update(mockRelease.id, updateDto)).rejects.toThrow(
+        ConflictException,
+      );
+
+      // Reset mocks and test again for the specific error message
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockRelease)
+        .mockResolvedValueOnce(existingRelease);
+
+      await expect(service.update(mockRelease.id, updateDto)).rejects.toThrow(
+        'A release with the title "Existing Album Title" already exists for this artist',
+      );
+    });
+
+    it('should update title when no duplicate exists', async () => {
+      const updateDto = { title: 'New Unique Title' };
+      const updatedRelease = { ...mockRelease, ...updateDto };
+
+      // First call to findOne returns the current release being updated
+      // Second call to findOne returns null (no duplicate found)
+      mockRepository.findOne
+        .mockResolvedValueOnce(mockRelease)
+        .mockResolvedValueOnce(null);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.update(mockRelease.id, updateDto);
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('should update title to same title (no change)', async () => {
+      const updateDto = { title: mockRelease.title };
+      const updatedRelease = { ...mockRelease, ...updateDto };
+
+      mockRepository.findOne.mockResolvedValue(mockRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.update(mockRelease.id, updateDto);
+
+      expect(result).toEqual(updatedRelease);
+      expect(mockRepository.save).toHaveBeenCalled();
+      // Should not check for duplicates when title hasn't changed
     });
   });
 
