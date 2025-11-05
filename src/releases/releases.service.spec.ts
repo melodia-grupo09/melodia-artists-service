@@ -29,6 +29,7 @@ describe('ReleasesService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
+    findAndCount: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -613,6 +614,93 @@ describe('ReleasesService', () => {
         relations: ['artist'],
       });
       expect(mockRepository.remove).toHaveBeenCalledWith(mockRelease);
+    });
+  });
+
+  describe('search', () => {
+    const mockSearchResults: Release[] = [
+      {
+        id: '1',
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: new Date('2023-01-01'),
+        coverUrl: 'http://example.com/cover.jpg',
+        artist: {
+          id: 'artist1',
+          name: 'Test Artist',
+          imageUrl: 'http://example.com/artist.jpg',
+          coverUrl: 'http://example.com/cover.jpg',
+          followersCount: 1000,
+          bio: 'Test bio',
+          socialLinks: {},
+          releases: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        artistId: 'artist1',
+        songIds: ['song1', 'song2'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: '2',
+        title: 'Another Release',
+        type: ReleaseType.SINGLE,
+        releaseDate: new Date('2023-02-01'),
+        coverUrl: 'http://example.com/cover2.jpg',
+        artist: {
+          id: 'artist2',
+          name: 'Another Artist',
+          imageUrl: 'http://example.com/artist2.jpg',
+          coverUrl: 'http://example.com/cover2.jpg',
+          followersCount: 500,
+          bio: 'Another bio',
+          socialLinks: {},
+          releases: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        artistId: 'artist2',
+        songIds: ['song3'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    it('should return releases matching the search query', async () => {
+      mockRepository.findAndCount.mockResolvedValue([mockSearchResults, 2]);
+
+      const result = await service.search('Test', 20, 1);
+
+      expect(mockRepository.findAndCount).toHaveBeenCalled();
+      expect(result).toEqual(mockSearchResults);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should handle pagination correctly', async () => {
+      mockRepository.findAndCount.mockResolvedValue([
+        [mockSearchResults[0]],
+        1,
+      ]);
+
+      const result = await service.search('Release', 1, 2);
+
+      expect(mockRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 1,
+          skip: 1,
+        }),
+      );
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty array when no releases match', async () => {
+      mockRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.search('NonExistent', 20, 1);
+
+      expect(result).toEqual([]);
+      expect(result).toHaveLength(0);
     });
   });
 });

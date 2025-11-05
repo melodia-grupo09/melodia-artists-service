@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Release, ReleaseType } from './entities/release.entity';
 import { CreateReleaseDto } from './dto/create-release.dto';
 import { UpdateReleaseDto } from './dto/update-release.dto';
@@ -243,5 +243,22 @@ export class ReleasesService {
   async removeByArtist(artistId: string, releaseId: string): Promise<void> {
     const release = await this.findOneByArtist(artistId, releaseId);
     await this.releasesRepository.remove(release);
+  }
+
+  async search(query: string, limit: number, page: number): Promise<Release[]> {
+    const skip = (page - 1) * limit;
+
+    const [releases] = await this.releasesRepository.findAndCount({
+      where: [{ title: ILike(`%${query}%`) }],
+      relations: ['artist'],
+      take: limit,
+      skip: skip,
+      order: {
+        releaseDate: 'DESC',
+        title: 'ASC',
+      },
+    });
+
+    return releases;
   }
 }
