@@ -74,3 +74,79 @@ Comprehensive test coverage tracked automatically via Codecov:
 - **ESLint**: Code quality and style enforcement
 - **class-validator**: Advanced DTO validation for file uploads and artist data
 - **TypeScript**: Type safety and enhanced developer experience
+
+## TODO Progress
+
+### Artist Profile Features
+
+#### Artist Identity
+
+- [x] **CA1**: Artist identity visual elements
+  - **Name**: Artist name display (`name` field)
+  - **Images**: Profile image and cover support (`imageUrl`, `coverUrl` fields)
+  - **Fallback**: Proper handling for missing images
+  - **Endpoints**: `GET /artists/:id`, `PATCH /artists/:id/media`
+
+#### Artist Metrics
+
+- [x] **CA2**: Monthly listeners metric (handled by metrics service)
+- [x] **CA2**: Followers count tracking (`followersCount` field)
+  - **Endpoints**: `PATCH /artists/:id/follow`, `PATCH /artists/:id/unfollow`
+
+#### Artist Actions
+
+- [x] **CA3**: Follow/Unfollow functionality
+  - **Follow**: `PATCH /artists/:id/follow` - Increment followers count
+  - **Unfollow**: `PATCH /artists/:id/unfollow` - Decrement followers count
+- [ ] **CA3**: Play and Shuffle controls (responsibility of player/songs service)
+  - Play should start from #1 Popular song
+  - Shuffle should mix top 10 popular songs
+
+#### Artist Profile Structure
+
+- [x] **CA4**: Discography module
+  - **Endpoint**: `GET /artists/:id/releases` with type filtering
+  - **Types**: Albums, Singles, EPs support
+- [x] **CA4**: About section
+  - **Bio**: Artist biography field in entity (`bio` field)
+  - **Social Links**: Social media links support (`socialLinks` field)
+- [ ] **CA4**: Popular songs module (requires songs service integration)
+- [ ] **CA4**: Liked Songs module (handled by users service + songs service)
+- [ ] **CA4**: Artist Pick module (requires manual curation feature)
+- [ ] **CA4**: Appears On module (requires collaboration/feature detection)
+- [ ] **CA4**: Similar Artists module (requires recommendation algorithm)
+
+#### Liked Songs Integration
+
+- [ ] **CA5**: User liked songs filtering by artist (handled by users service)
+  - Should show "Liked songs (N)" when user has ≥1 liked song from artist
+  - Should open filtered collection ordered by most recent
+
+### Discography Management
+
+#### Discography Organization (CA1 & CA2)
+
+- [x] **CA1**: Tab-based discography structure
+  - **Albums Tab**: `GET /artists/:id/albums` - Albums only
+  - **Singles & EPs Tab**: `GET /artists/:id/singles-eps` - Singles and EPs combined
+  - **Organized View**: `GET /artists/:id/discography` - Both sections in one response
+  - **Filtering**: Only primary artist releases (no playlists or collaborations)
+
+- [x] **CA2**: Proper ordering by tab
+  - **Albums**: Ordered by release date descending, alphabetical tie-breaker
+  - **Singles & EPs**: Ordered by release date descending, alphabetical tie-breaker
+  - **Latest Release Badge**: `isLatest` flag for most recent releases
+  - **Popular Releases**: Ready for metrics service integration (endpoint: `GET /metrics/albums`)
+
+#### Discography Features
+
+- [x] **CA3**: Release card display (frontend responsibility)
+  - Cover image, title, year, type chip (Album/EP/Single)
+  - Navigation to release details
+  - Single treated as collection of 1 song
+
+- [ ] **CA4**: Upcoming releases
+  - Scheduled releases with future dates
+  - Pre-save functionality
+  - Countdown timers for release dates
+  - Disabled playback until release (except early releases)
