@@ -145,8 +145,41 @@ Comprehensive test coverage tracked automatically via Codecov:
   - Navigation to release details
   - Single treated as collection of 1 song
 
-- [ ] **CA4**: Upcoming releases
+- [x] **CA4**: Upcoming releases implementation
+  - **Endpoint**: `GET /artists/:id/releases/upcoming` - Get scheduled releases
+  - **Published only**: `GET /artists/:id/releases/published` - Get published releases only
   - Scheduled releases with future dates
-  - Pre-save functionality
-  - Countdown timers for release dates
-  - Disabled playback until release (except early releases)
+  - Release status management (DRAFT, SCHEDULED, PUBLISHED)
+
+### Release Publication Management
+
+#### Release Creation and Validation (CA1)
+
+- [x] **CA1**: Guided creation with validations
+  - **Required fields**: Title, genres, cover image, audio files (songIds)
+  - **Validation**: Prevents continuation without required fields
+  - **Error reporting**: Clear validation messages for missing requirements
+
+#### Publication Options (CA2)
+
+- [x] **CA2**: Unified release creation with smart publication logic
+  - **Endpoint**: `POST /artists/:id/releases` - Single endpoint for all publication types
+  - **Publish immediately**: When no `scheduledPublishAt` is provided, publishes instantly
+  - **Schedule publication**: When `scheduledPublishAt` is provided and is future date, schedules automatically
+  - **Smart status**: Automatically determines PUBLISHED vs SCHEDULED based on timing
+
+#### Release Availability Management
+
+- [x] **Simplified availability approach**:
+  - **Frontend-driven**: Frontend checks `scheduledPublishAt` to show "upcoming" vs "available"
+  - **Songs service responsibility**: Individual song availability handled by Songs microservice
+  - **400 responses**: Songs API returns 400 when song not yet available with `availableAt` timestamp
+  - **No complex scheduling**: Avoids cron jobs and background workers
+  - **Real-time UI**: Frontend can show countdown timers and "coming soon" states
+
+#### Release Metadata Management
+
+- [x] **Enhanced release entity** with publication fields
+  - **Status tracking**: DRAFT, SCHEDULED, PUBLISHED states
+  - **Scheduling**: scheduledPublishAt field for timed publication
+  - **Metadata**: genres support for music categorization

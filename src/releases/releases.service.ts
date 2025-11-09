@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
-import { Release, ReleaseType } from './entities/release.entity';
+import { Release, ReleaseType, ReleaseStatus } from './entities/release.entity';
 import { CreateReleaseDto } from './dto/create-release.dto';
 import { UpdateReleaseDto } from './dto/update-release.dto';
 
@@ -17,6 +18,8 @@ export class ReleasesService {
   ) {}
 
   async create(createReleaseDto: CreateReleaseDto): Promise<Release> {
+    this.validateReleaseRequirements(createReleaseDto);
+
     // Check if a release with the same title already exists for this artist
     const existingRelease = await this.releasesRepository.findOne({
       where: {
@@ -31,12 +34,79 @@ export class ReleasesService {
       );
     }
 
+    // Determine status based on scheduledPublishAt
+    let status = createReleaseDto.status || ReleaseStatus.DRAFT;
+
+    // If scheduledPublishAt is provided and is in the future, set as SCHEDULED
+    if (createReleaseDto.scheduledPublishAt) {
+      const scheduledDate = new Date(createReleaseDto.scheduledPublishAt);
+      if (scheduledDate > new Date()) {
+        status = ReleaseStatus.SCHEDULED;
+      } else {
+        status = ReleaseStatus.PUBLISHED; // If date is now or past, publish immediately
+      }
+    } else if (
+      !createReleaseDto.scheduledPublishAt &&
+      createReleaseDto.status === undefined
+    ) {
+      // If no scheduledPublishAt and no explicit status, publish now
+      status = ReleaseStatus.PUBLISHED;
+    }
+
     const release = this.releasesRepository.create({
       ...createReleaseDto,
+      status,
       releaseDate: new Date(createReleaseDto.releaseDate),
+      scheduledPublishAt: createReleaseDto.scheduledPublishAt
+        ? new Date(createReleaseDto.scheduledPublishAt)
+        : undefined,
       songIds: createReleaseDto.songIds || [],
     });
+
     return this.releasesRepository.save(release);
+  }
+
+  // Validate release requirements
+  private validateReleaseRequirements(releaseData: CreateReleaseDto): void {
+    const errors: string[] = [];
+
+    // Required fields validation
+    if (!releaseData.title?.trim()) {
+      errors.push('Title is required');
+    }
+
+    if (!releaseData.genres || releaseData.genres.length === 0) {
+      errors.push('At least one genre is required');
+    }
+
+    if (!releaseData.coverUrl?.trim()) {
+      errors.push('Cover image is required');
+    }
+
+    if (!releaseData.songIds || releaseData.songIds.length === 0) {
+      errors.push('At least one song is required');
+    }
+
+    // Validation for scheduled releases
+    if (releaseData.status === ReleaseStatus.SCHEDULED) {
+      if (!releaseData.scheduledPublishAt) {
+        errors.push(
+          'Scheduled publish date is required for programmed releases',
+        );
+      } else {
+        const scheduledDate = new Date(releaseData.scheduledPublishAt);
+        if (scheduledDate <= new Date()) {
+          errors.push('Scheduled publish date must be in the future');
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new BadRequestException({
+        message: 'Release validation failed',
+        errors,
+      });
+    }
   }
 
   async findAll(): Promise<Release[]> {

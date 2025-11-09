@@ -6,7 +6,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ReleaseType } from '../entities/release.entity';
+import { ReleaseType, ReleaseStatus } from '../entities/release.entity';
 
 export class CreateReleaseDto {
   @ApiProperty({
@@ -27,11 +27,41 @@ export class CreateReleaseDto {
   type: ReleaseType;
 
   @ApiProperty({
+    description: 'Release status',
+    enum: ReleaseStatus,
+    enumName: 'ReleaseStatus',
+    example: ReleaseStatus.DRAFT,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ReleaseStatus)
+  status?: ReleaseStatus;
+
+  @ApiProperty({
     description: 'Release date in ISO format',
     example: '2023-05-12',
   })
   @IsDateString()
   releaseDate: string;
+
+  @ApiProperty({
+    description: 'Scheduled publish date and time (for programmed releases)',
+    example: '2023-05-12T15:30:00Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledPublishAt?: string;
+
+  @ApiProperty({
+    description: 'Music genres',
+    example: ['reggaeton', 'latin-trap'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  genres?: string[];
 
   @ApiProperty({
     description: 'Cover image URL',

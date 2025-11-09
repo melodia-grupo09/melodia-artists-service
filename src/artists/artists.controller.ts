@@ -299,11 +299,15 @@ export class ArtistsController {
 
   @Post(':id/releases')
   @UseInterceptors(FileInterceptor('cover'))
-  @ApiOperation({ summary: 'Create a new release for the artist' })
+  @ApiOperation({
+    summary: 'Create a new release for the artist',
+    description:
+      'Creates a release with automatic publication logic. If no scheduledPublishAt is provided, publishes immediately. If scheduledPublishAt is provided and is in the future, schedules for later',
+  })
   @ApiParam({ name: 'id', description: 'Artist ID' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Release data with optional cover image',
+    description: 'Release data with optional cover image and scheduling',
     schema: {
       type: 'object',
       properties: {
@@ -314,7 +318,7 @@ export class ArtistsController {
         },
         type: {
           type: 'string',
-          enum: ['SINGLE', 'EP', 'ALBUM', 'COMPILATION'],
+          enum: ['SINGLE', 'EP', 'ALBUM'],
           example: 'ALBUM',
           description: 'Type of release',
         },
@@ -323,6 +327,19 @@ export class ArtistsController {
           format: 'date',
           example: '2023-05-12',
           description: 'Release date in ISO format (YYYY-MM-DD)',
+        },
+        scheduledPublishAt: {
+          type: 'string',
+          format: 'date-time',
+          example: '2024-01-15T15:30:00Z',
+          description:
+            'Optional: Schedule publication for future date. If omitted, publishes immediately.',
+        },
+        genres: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['reggaeton', 'latin-trap'],
+          description: 'Music genres (required for validation)',
         },
         songIds: {
           type: 'array',
@@ -333,41 +350,49 @@ export class ArtistsController {
         cover: {
           type: 'string',
           format: 'binary',
-          description: 'Cover image file (optional)',
+          description: 'Cover image file (required)',
         },
       },
-      required: ['title', 'type', 'releaseDate'],
+      required: ['title', 'type', 'releaseDate', 'genres', 'songIds', 'cover'],
     },
     examples: {
-      albumWithCover: {
-        summary: 'Album with cover image',
-        description: 'Creating a full album with cover image and songs',
+      publishNow: {
+        summary: 'Publish immediately',
+        description:
+          'Release will be published immediately since no scheduledPublishAt is provided',
         value: {
           title: 'Vida Rockstar',
           type: 'ALBUM',
           releaseDate: '2023-05-12',
+          genres: ['reggaeton', 'pop-latino'],
           songIds: ['song-id-1', 'song-id-2', 'song-id-3'],
           cover: '(binary file)',
         },
       },
-      singleRelease: {
-        summary: 'Single release',
-        description: 'Creating a single without cover image',
+      scheduleForLater: {
+        summary: 'Schedule for future',
+        description:
+          'Release will be scheduled for the specified date and time',
         value: {
           title: 'Mi Nuevo Single',
           type: 'SINGLE',
           releaseDate: '2024-01-15',
+          scheduledPublishAt: '2024-01-15T15:30:00Z',
+          genres: ['reggaeton'],
           songIds: ['single-song-id'],
+          cover: '(binary file)',
         },
       },
-      epRelease: {
-        summary: 'EP release',
-        description: 'Creating an EP with multiple songs',
+      multipleGenres: {
+        summary: 'Release with multiple genres',
+        description: 'Creating a release with multiple music genres',
         value: {
-          title: 'Primeros Pasos EP',
+          title: 'Fusión Musical',
           type: 'EP',
           releaseDate: '2024-02-20',
-          songIds: ['ep-song-1', 'ep-song-2', 'ep-song-3', 'ep-song-4'],
+          genres: ['reggaeton', 'trap', 'pop-latino'],
+          songIds: ['song-1', 'song-2', 'song-3'],
+          cover: '(binary file)',
         },
       },
     },
