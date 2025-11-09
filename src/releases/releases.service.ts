@@ -295,6 +295,14 @@ export class ReleasesService {
     songIds: string[],
   ): Promise<Release> {
     const release = await this.findOneByArtist(artistId, releaseId);
+
+    // CA5: No permitir agregar canciones a releases publicados
+    if (release.status === ReleaseStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Cannot add songs to published releases. Only draft and scheduled releases can be modified.',
+      );
+    }
+
     const uniqueSongIds = [...new Set([...release.songIds, ...songIds])];
     release.songIds = uniqueSongIds;
     return this.releasesRepository.save(release);
@@ -306,6 +314,14 @@ export class ReleasesService {
     songIds: string[],
   ): Promise<Release> {
     const release = await this.findOneByArtist(artistId, releaseId);
+
+    // CA5: No permitir remover canciones de releases publicados
+    if (release.status === ReleaseStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Cannot remove songs from published releases. Only draft and scheduled releases can be modified.',
+      );
+    }
+
     release.songIds = release.songIds.filter((id) => !songIds.includes(id));
     return this.releasesRepository.save(release);
   }

@@ -168,6 +168,30 @@ Comprehensive test coverage tracked automatically via Codecov:
   - **Schedule publication**: When `scheduledPublishAt` is provided and is future date, schedules automatically
   - **Smart status**: Automatically determines PUBLISHED vs SCHEDULED based on timing
 
+#### Post-Publication Editing (CA4)
+
+- [x] **CA4**: Edit metadata for any release state (Draft, Scheduled, or Published)
+  - **Main endpoint**: `PATCH /artists/:artistId/releases/:releaseId` - Edit any metadata
+  - **Editable fields**: Title, type, release date, cover, genres, songs, scheduling
+  - **Cover-specific**: `PATCH /:artistId/releases/:releaseId/cover` - Update cover image only
+  - **Song management**:
+    - `PATCH /:artistId/releases/:releaseId/songs/add` - Add songs to release
+    - `PATCH /:artistId/releases/:releaseId/songs/remove` - Remove songs from release
+  - **State-agnostic**: Works for DRAFT, SCHEDULED, and PUBLISHED releases
+  - **No restrictions**: All non-critical metadata can be modified post-publication
+
+#### Song Location Management (CA5)
+
+- [x] **CA5**: Define song destination and manage release content
+  - **Single creation**: `POST /artists/:id/releases` with `type: 'SINGLE'` and `songIds: ['song-id']`
+  - **EP/Album management**: Add songs to existing non-published releases
+    - `PATCH /:artistId/releases/:releaseId/songs/add` - Add songs to DRAFT or SCHEDULED releases
+    - `PATCH /:artistId/releases/:releaseId/songs/remove` - Remove songs from DRAFT or SCHEDULED releases
+  - **Publication protection**: Cannot modify song list of PUBLISHED releases
+  - **Song ordering**: Array order in `songIds` defines track sequence
+  - **Create new**: `POST /artists/:id/releases` to create new EP/Album with songs
+  - **Playlist exclusion**: No playlist functionality - only official releases (Singles, EPs, Albums)
+
 #### Release Availability Management
 
 - [x] **Simplified availability approach**:
