@@ -75,8 +75,9 @@ export class ReleasesService {
       errors.push('Title is required');
     }
 
-    if (!releaseData.genres || releaseData.genres.length === 0) {
-      errors.push('At least one genre is required');
+    // Genres validation
+    if (releaseData.genres !== undefined && releaseData.genres.length === 0) {
+      errors.push('If genres are provided, at least one genre is required');
     }
 
     if (!releaseData.coverUrl?.trim()) {

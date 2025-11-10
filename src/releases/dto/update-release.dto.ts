@@ -59,4 +59,14 @@ export class UpdateReleaseDto extends PartialType(CreateReleaseDto) {
   @IsArray()
   @IsString({ each: true })
   songIds?: string[];
+
+  @ApiProperty({
+    description: 'Music genres for this release',
+    example: ['Rock', 'Alternative', 'Indie'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  genres?: string[];
 }
