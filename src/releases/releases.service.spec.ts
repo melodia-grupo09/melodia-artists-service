@@ -2,7 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { ReleasesService } from './releases.service';
-import { Release, ReleaseType } from './entities/release.entity';
+import { Release, ReleaseType, ReleaseStatus } from './entities/release.entity';
+import { CreateReleaseDto } from './dto/create-release.dto';
 
 describe('ReleasesService', () => {
   let service: ReleasesService;
@@ -11,8 +12,10 @@ describe('ReleasesService', () => {
     id: '123e4567-e89b-12d3-a456-426614174000',
     title: 'Test Album',
     type: ReleaseType.ALBUM,
+    status: ReleaseStatus.DRAFT,
     releaseDate: new Date('2023-05-12'),
     coverUrl: 'https://example.com/cover.jpg',
+    genres: ['reggaeton', 'pop'],
     artistId: '456e7890-e89b-12d3-a456-426614174000',
     songIds: ['song1', 'song2'],
     createdAt: new Date(),
@@ -62,6 +65,8 @@ describe('ReleasesService', () => {
         releaseDate: '2023-05-12',
         artistId: '456e7890-e89b-12d3-a456-426614174000',
         songIds: ['song1', 'song2'],
+        genres: ['reggaeton', 'pop'],
+        coverUrl: 'https://example.com/cover.jpg',
       };
 
       mockRepository.create.mockReturnValue(mockRelease);
@@ -73,29 +78,27 @@ describe('ReleasesService', () => {
         ...createReleaseDto,
         releaseDate: new Date(createReleaseDto.releaseDate),
         songIds: createReleaseDto.songIds,
+        status: ReleaseStatus.PUBLISHED, // Should be published since no scheduledPublishAt
+        scheduledPublishAt: undefined,
       });
       expect(mockRepository.save).toHaveBeenCalledWith(mockRelease);
       expect(result).toEqual(mockRelease);
     });
 
-    it('should create a release with empty songIds if not provided', async () => {
+    it('should throw BadRequestException when songIds is missing', async () => {
       const createReleaseDto = {
         title: 'Test Album',
         type: ReleaseType.ALBUM,
         releaseDate: '2023-05-12',
         artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton', 'pop'],
+        coverUrl: 'https://example.com/cover.jpg',
+        // Missing songIds
       };
 
-      mockRepository.create.mockReturnValue(mockRelease);
-      mockRepository.save.mockResolvedValue(mockRelease);
-
-      await service.create(createReleaseDto);
-
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        ...createReleaseDto,
-        releaseDate: new Date(createReleaseDto.releaseDate),
-        songIds: [],
-      });
+      await expect(service.create(createReleaseDto)).rejects.toThrow(
+        'Release validation failed',
+      );
     });
 
     it('should throw ConflictException when creating a release with duplicate title for same artist', async () => {
@@ -104,6 +107,9 @@ describe('ReleasesService', () => {
         type: ReleaseType.ALBUM,
         releaseDate: '2023-05-12',
         artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton', 'pop'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1', 'song2'], // Add required songIds
       };
 
       const existingRelease = {
@@ -138,6 +144,9 @@ describe('ReleasesService', () => {
         type: ReleaseType.ALBUM,
         releaseDate: '2023-05-12',
         artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton', 'pop'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1', 'song2'], // Add required songIds
       };
 
       // Mock findOne to return null (no duplicate for this artist)
@@ -623,8 +632,10 @@ describe('ReleasesService', () => {
         id: '1',
         title: 'Test Release',
         type: ReleaseType.ALBUM,
+        status: ReleaseStatus.PUBLISHED,
         releaseDate: new Date('2023-01-01'),
         coverUrl: 'http://example.com/cover.jpg',
+        genres: ['rock', 'alternative'],
         artist: {
           id: 'artist1',
           name: 'Test Artist',
@@ -646,8 +657,10 @@ describe('ReleasesService', () => {
         id: '2',
         title: 'Another Release',
         type: ReleaseType.SINGLE,
+        status: ReleaseStatus.PUBLISHED,
         releaseDate: new Date('2023-02-01'),
         coverUrl: 'http://example.com/cover2.jpg',
+        genres: ['pop'],
         artist: {
           id: 'artist2',
           name: 'Another Artist',
@@ -701,6 +714,312 @@ describe('ReleasesService', () => {
 
       expect(result).toEqual([]);
       expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('release scheduling (CA1 & CA2)', () => {
+    it('should create release with PUBLISHED status when no scheduledPublishAt is provided', async () => {
+      const createReleaseDto = {
+        title: 'Immediate Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(null); // No duplicate
+      mockRepository.create.mockReturnValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      await service.create(createReleaseDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        releaseDate: new Date(createReleaseDto.releaseDate),
+        songIds: createReleaseDto.songIds,
+        status: ReleaseStatus.PUBLISHED,
+        scheduledPublishAt: undefined,
+      });
+    });
+
+    it('should create release with SCHEDULED status when future scheduledPublishAt is provided', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7); // 7 days in the future
+
+      const createReleaseDto = {
+        title: 'Scheduled Release',
+        type: ReleaseType.SINGLE,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['pop'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        scheduledPublishAt: futureDate.toISOString(),
+      };
+
+      const mockScheduledRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.SCHEDULED,
+        scheduledPublishAt: futureDate,
+      };
+
+      mockRepository.findOne.mockResolvedValue(null); // No duplicate
+      mockRepository.create.mockReturnValue(mockScheduledRelease);
+      mockRepository.save.mockResolvedValue(mockScheduledRelease);
+
+      const result = await service.create(createReleaseDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        releaseDate: new Date(createReleaseDto.releaseDate),
+        songIds: createReleaseDto.songIds,
+        status: ReleaseStatus.SCHEDULED,
+        scheduledPublishAt: futureDate,
+      });
+      expect(result).toEqual(mockScheduledRelease);
+    });
+
+    it('should create release with PUBLISHED status when past scheduledPublishAt is provided', async () => {
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1); // 1 day in the past
+
+      const createReleaseDto = {
+        title: 'Past Scheduled Release',
+        type: ReleaseType.EP,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['rock'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1', 'song2'],
+        scheduledPublishAt: pastDate.toISOString(),
+      };
+
+      mockRepository.findOne.mockResolvedValue(null); // No duplicate
+      mockRepository.create.mockReturnValue(mockRelease);
+      mockRepository.save.mockResolvedValue(mockRelease);
+
+      await service.create(createReleaseDto);
+
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        releaseDate: new Date(createReleaseDto.releaseDate),
+        songIds: createReleaseDto.songIds,
+        status: ReleaseStatus.PUBLISHED, // Should be published for past dates
+        scheduledPublishAt: pastDate,
+      });
+    });
+  });
+
+  describe('release validation (CA1)', () => {
+    it('should throw BadRequestException when title is missing', async () => {
+      const createReleaseDto: any = {
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        // Missing title
+      };
+
+      await expect(
+        service.create(createReleaseDto as CreateReleaseDto),
+      ).rejects.toThrow('Release validation failed');
+    });
+
+    it('should throw BadRequestException when genres array is empty (but not when missing)', async () => {
+      const createReleaseDto: any = {
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        genres: [], // Empty array should fail
+      };
+
+      await expect(
+        service.create(createReleaseDto as CreateReleaseDto),
+      ).rejects.toThrow('Release validation failed');
+    });
+
+    it('should successfully create release when genres are missing (legacy compatibility)', async () => {
+      const createReleaseDto: any = {
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        // Missing genres - should be allowed for legacy compatibility
+      };
+
+      const expectedRelease = {
+        id: 'mock-id',
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: new Date('2023-05-12'),
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        status: ReleaseStatus.PUBLISHED,
+        genres: undefined,
+        scheduledPublishAt: undefined,
+      };
+
+      mockRepository.create.mockReturnValue(expectedRelease);
+      mockRepository.save.mockResolvedValue(expectedRelease);
+
+      const result = await service.create(createReleaseDto as CreateReleaseDto);
+
+      expect(result).toEqual(expectedRelease);
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        ...createReleaseDto,
+        status: ReleaseStatus.PUBLISHED,
+        releaseDate: new Date('2023-05-12'),
+        scheduledPublishAt: undefined,
+        songIds: ['song1'],
+      });
+    });
+
+    it('should throw BadRequestException when coverUrl is missing', async () => {
+      const createReleaseDto: any = {
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton'],
+        songIds: ['song1'],
+        // Missing coverUrl
+      };
+
+      await expect(
+        service.create(createReleaseDto as CreateReleaseDto),
+      ).rejects.toThrow('Release validation failed');
+    });
+
+    it('should throw BadRequestException when scheduledPublishAt is in future but status is explicitly SCHEDULED without valid date', async () => {
+      const createReleaseDto = {
+        title: 'Test Release',
+        type: ReleaseType.ALBUM,
+        releaseDate: '2023-05-12',
+        artistId: '456e7890-e89b-12d3-a456-426614174000',
+        genres: ['reggaeton'],
+        coverUrl: 'https://example.com/cover.jpg',
+        songIds: ['song1'],
+        status: ReleaseStatus.SCHEDULED, // Explicitly set as scheduled
+        // Missing scheduledPublishAt when status is SCHEDULED
+      };
+
+      await expect(service.create(createReleaseDto)).rejects.toThrow(
+        'Release validation failed',
+      );
+    });
+  });
+
+  describe('song management with publication protection (CA5)', () => {
+    it('should throw BadRequestException when adding songs to published release', async () => {
+      const publishedRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.PUBLISHED,
+      };
+
+      mockRepository.findOne.mockResolvedValue(publishedRelease);
+
+      await expect(
+        service.addSongsByArtist('artist1', 'release1', ['newSong']),
+      ).rejects.toThrow('Cannot add songs to published releases');
+    });
+
+    it('should allow adding songs to draft release', async () => {
+      const draftRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.DRAFT,
+        songIds: ['song1'],
+      };
+
+      const updatedRelease = {
+        ...draftRelease,
+        songIds: ['song1', 'song2'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(draftRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.addSongsByArtist('artist1', 'release1', [
+        'song2',
+      ]);
+
+      expect(result.songIds).toEqual(['song1', 'song2']);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          songIds: ['song1', 'song2'],
+        }),
+      );
+    });
+
+    it('should allow adding songs to scheduled release', async () => {
+      const scheduledRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.SCHEDULED,
+        songIds: ['song1'],
+      };
+
+      const updatedRelease = {
+        ...scheduledRelease,
+        songIds: ['song1', 'song3'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(scheduledRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.addSongsByArtist('artist1', 'release1', [
+        'song3',
+      ]);
+
+      expect(result.songIds).toEqual(['song1', 'song3']);
+    });
+
+    it('should throw BadRequestException when removing songs from published release', async () => {
+      const publishedRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.PUBLISHED,
+      };
+
+      mockRepository.findOne.mockResolvedValue(publishedRelease);
+
+      await expect(
+        service.removeSongsByArtist('artist1', 'release1', ['song1']),
+      ).rejects.toThrow('Cannot remove songs from published releases');
+    });
+
+    it('should allow removing songs from draft release', async () => {
+      const draftRelease = {
+        ...mockRelease,
+        status: ReleaseStatus.DRAFT,
+        songIds: ['song1', 'song2'],
+      };
+
+      const updatedRelease = {
+        ...draftRelease,
+        songIds: ['song1'],
+      };
+
+      mockRepository.findOne.mockResolvedValue(draftRelease);
+      mockRepository.save.mockResolvedValue(updatedRelease);
+
+      const result = await service.removeSongsByArtist('artist1', 'release1', [
+        'song2',
+      ]);
+
+      expect(result.songIds).toEqual(['song1']);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          songIds: ['song1'],
+        }),
+      );
     });
   });
 });
