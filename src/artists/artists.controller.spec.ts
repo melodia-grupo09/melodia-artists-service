@@ -493,10 +493,10 @@ describe('ArtistsController', () => {
 
       expect(result).toEqual(mockCreatedRelease);
       expect(mockArtistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
-      expect(mockReleasesService.create).toHaveBeenCalledWith({
-        ...createReleaseDto,
-        artistId: mockArtist.id,
-      });
+      expect(mockReleasesService.create).toHaveBeenCalledWith(
+        createReleaseDto,
+        mockArtist.id,
+      );
     });
 
     it('should create a release with cover file', async () => {
@@ -629,10 +629,10 @@ describe('ArtistsController', () => {
       ).rejects.toThrow(ConflictException);
 
       expect(mockArtistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
-      expect(mockReleasesService.create).toHaveBeenCalledWith({
-        ...createReleaseDto,
-        artistId: mockArtist.id,
-      });
+      expect(mockReleasesService.create).toHaveBeenCalledWith(
+        createReleaseDto,
+        mockArtist.id,
+      );
     });
   });
 

@@ -414,9 +414,12 @@ export class ArtistsController {
       // Verify artist exists first
       await this.artistsService.findOne(artistId);
 
-      // Add artistId to the DTO
-      const releaseData = { ...createReleaseDto, artistId };
-      const release = await this.releasesService.create(releaseData);
+      // Create release with artistId as separate parameter
+      // Pass artistId as separate parameter
+      const release = await this.releasesService.create(
+        createReleaseDto,
+        artistId,
+      );
 
       // If there is a cover image, upload it
       if (file) {

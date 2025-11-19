@@ -17,14 +17,17 @@ export class ReleasesService {
     private releasesRepository: Repository<Release>,
   ) {}
 
-  async create(createReleaseDto: CreateReleaseDto): Promise<Release> {
+  async create(
+    createReleaseDto: CreateReleaseDto,
+    artistId: string,
+  ): Promise<Release> {
     this.validateReleaseRequirements(createReleaseDto);
 
     // Check if a release with the same title already exists for this artist
     const existingRelease = await this.releasesRepository.findOne({
       where: {
         title: createReleaseDto.title,
-        artistId: createReleaseDto.artistId,
+        artistId: artistId,
       },
     });
 
@@ -55,6 +58,7 @@ export class ReleasesService {
 
     const release = this.releasesRepository.create({
       ...createReleaseDto,
+      artistId,
       status,
       releaseDate: new Date(createReleaseDto.releaseDate),
       scheduledPublishAt: createReleaseDto.scheduledPublishAt

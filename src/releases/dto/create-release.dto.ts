@@ -73,15 +73,6 @@ export class CreateReleaseDto {
   coverUrl?: string;
 
   @ApiProperty({
-    description: 'Artist ID who owns this release',
-    example: 'user-12345-test-67890',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  artistId?: string;
-
-  @ApiProperty({
     description: 'Array of song IDs from the songs microservice',
     example: ['song-id-1', 'song-id-2', 'song-id-3'],
     required: false,
