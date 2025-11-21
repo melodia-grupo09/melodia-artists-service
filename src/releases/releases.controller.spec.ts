@@ -180,8 +180,8 @@ describe('ReleasesController', () => {
   });
 
   describe('getCoverUrlBySongId', () => {
-    it('should return cover URL for a given song ID', async () => {
-      const songId = '550e8400-e29b-41d4-a716-446655440000';
+    it('should return cover URL for a given song ID (MongoDB ObjectId)', async () => {
+      const songId = '507f1f77bcf86cd799439011';
       const mockCoverUrl = {
         coverUrl: 'https://res.cloudinary.com/test/cover.jpg',
       };

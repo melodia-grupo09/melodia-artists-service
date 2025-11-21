@@ -70,8 +70,8 @@ export class ReleasesController {
   @ApiOperation({ summary: 'Get cover URL by song ID' })
   @ApiParam({
     name: 'songId',
-    description: 'Song ID (UUID format)',
-    example: 'a1234567-89ab-cdef-0123-456789abcdef',
+    description: 'Song ID (MongoDB ObjectId or any string format)',
+    example: '507f1f77bcf86cd799439011',
   })
   @ApiResponse({
     status: 200,
@@ -87,16 +87,12 @@ export class ReleasesController {
     },
   })
   @ApiResponse({
-    status: 400,
-    description: 'Invalid UUID format',
-  })
-  @ApiResponse({
     status: 404,
     description:
       'No release found containing this song or release has no cover',
   })
   async getCoverUrlBySongId(
-    @Param('songId', ParseUUIDPipe) songId: string,
+    @Param('songId') songId: string,
   ): Promise<{ coverUrl: string }> {
     return this.releasesService.getCoverUrlBySongId(songId);
   }
