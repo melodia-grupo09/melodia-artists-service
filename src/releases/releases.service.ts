@@ -352,4 +352,25 @@ export class ReleasesService {
 
     return releases;
   }
+
+  async getCoverUrlBySongId(songId: string): Promise<{ coverUrl: string }> {
+    const release = await this.releasesRepository
+      .createQueryBuilder('release')
+      .where(':songId = ANY(release.songIds)', { songId })
+      .getOne();
+
+    if (!release) {
+      throw new NotFoundException(
+        `No release found containing song with ID ${songId}`,
+      );
+    }
+
+    if (!release.coverUrl) {
+      throw new NotFoundException(
+        `Release found but has no cover image associated`,
+      );
+    }
+
+    return { coverUrl: release.coverUrl };
+  }
 }

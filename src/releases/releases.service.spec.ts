@@ -33,6 +33,7 @@ describe('ReleasesService', () => {
     findOne: jest.fn(),
     remove: jest.fn(),
     findAndCount: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -1027,6 +1028,107 @@ describe('ReleasesService', () => {
         expect.objectContaining({
           songIds: ['song1'],
         }),
+      );
+    });
+  });
+
+  describe('getCoverUrlBySongId', () => {
+    it('should return cover URL when song is found in a release', async () => {
+      const songId = 'song1';
+      const mockRelease = {
+        id: 'release1',
+        coverUrl: 'https://res.cloudinary.com/test/cover.jpg',
+        songIds: ['song1', 'song2'],
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockRelease),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getCoverUrlBySongId(songId);
+
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('release');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        ':songId = ANY(release.songIds)',
+        { songId },
+      );
+      expect(result).toEqual({
+        coverUrl: 'https://res.cloudinary.com/test/cover.jpg',
+      });
+    });
+
+    it('should throw NotFoundException when no release contains the song', async () => {
+      const songId = 'non-existent-song';
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        `No release found containing song with ID ${songId}`,
+      );
+    });
+
+    it('should throw NotFoundException when release has no cover URL', async () => {
+      const songId = 'song1';
+      const mockRelease = {
+        id: 'release1',
+        coverUrl: null,
+        songIds: ['song1', 'song2'],
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockRelease),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        'Release found but has no cover image associated',
+      );
+    });
+
+    it('should throw NotFoundException when release has empty cover URL', async () => {
+      const songId = 'song1';
+      const mockRelease = {
+        id: 'release1',
+        coverUrl: '',
+        songIds: ['song1', 'song2'],
+      };
+
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockRelease),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getCoverUrlBySongId(songId)).rejects.toThrow(
+        'Release found but has no cover image associated',
       );
     });
   });
