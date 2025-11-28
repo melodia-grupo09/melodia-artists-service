@@ -175,13 +175,17 @@ export class ArtistsService {
 
     qb.limit(20);
 
-    const rawResults = await qb.getRawMany();
+    const rawResults = await qb.getRawMany<any>();
 
-    const artists = rawResults.map((raw) => {
+    const artists = rawResults.map((raw: any) => {
       const a = new Artist();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       a.id = raw.artist_id;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       a.name = raw.artist_name;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       a.imageUrl = raw.artist_imageUrl;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       a.followersCount = raw.artist_followersCount;
       return a;
     });
@@ -200,9 +204,9 @@ export class ArtistsService {
   }
 
   private shuffleWithSeed<T>(array: T[], seed: number): T[] {
-    let m = array.length,
-      t,
-      i;
+    let m = array.length;
+    let t: T;
+    let i: number;
 
     const random = () => {
       const x = Math.sin(seed++) * 10000;

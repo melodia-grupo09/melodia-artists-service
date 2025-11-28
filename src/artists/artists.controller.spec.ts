@@ -8,6 +8,7 @@ import { FileUploadService } from '../upload/file-upload.service';
 import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
+import { CreateReleaseDto } from '../releases/dto/create-release.dto';
 import { Artist } from './entities/artist.entity';
 import { ReleaseType } from '../releases/entities/release.entity';
 
@@ -489,7 +490,7 @@ describe('ArtistsController', () => {
 
       const result = await controller.createRelease(
         mockArtist.id,
-        createReleaseDto as any,
+        createReleaseDto as CreateReleaseDto,
       );
 
       expect(result).toEqual(mockCreatedRelease);
@@ -532,7 +533,7 @@ describe('ArtistsController', () => {
 
       const result = await controller.createRelease(
         mockArtist.id,
-        createReleaseDto as any,
+        createReleaseDto as CreateReleaseDto,
         mockFile,
       );
 
@@ -559,7 +560,10 @@ describe('ArtistsController', () => {
       mockArtistsService.findOne.mockRejectedValue(error);
 
       await expect(
-        controller.createRelease(mockArtist.id, createReleaseDto as any),
+        controller.createRelease(
+          mockArtist.id,
+          createReleaseDto as CreateReleaseDto,
+        ),
       ).rejects.toThrow('Artist not found');
     });
 
@@ -575,7 +579,10 @@ describe('ArtistsController', () => {
       mockReleasesService.create.mockRejectedValue(error);
 
       await expect(
-        controller.createRelease(mockArtist.id, createReleaseDto as any),
+        controller.createRelease(
+          mockArtist.id,
+          createReleaseDto as CreateReleaseDto,
+        ),
       ).rejects.toThrow('Release creation failed');
     });
 
@@ -605,7 +612,7 @@ describe('ArtistsController', () => {
       await expect(
         controller.createRelease(
           mockArtist.id,
-          createReleaseDto as any,
+          createReleaseDto as CreateReleaseDto,
           mockFile,
         ),
       ).rejects.toThrow('File upload failed');
@@ -626,7 +633,10 @@ describe('ArtistsController', () => {
       mockReleasesService.create.mockRejectedValue(conflictError);
 
       await expect(
-        controller.createRelease(mockArtist.id, createReleaseDto as any),
+        controller.createRelease(
+          mockArtist.id,
+          createReleaseDto as CreateReleaseDto,
+        ),
       ).rejects.toThrow(ConflictException);
 
       expect(mockArtistsService.findOne).toHaveBeenCalledWith(mockArtist.id);
