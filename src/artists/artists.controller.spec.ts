@@ -36,6 +36,7 @@ describe('ArtistsController', () => {
     search: jest.fn(),
     incrementFollowers: jest.fn(),
     decrementFollowers: jest.fn(),
+    getRelatedArtists: jest.fn(),
   };
 
   const mockFileUploadService = {
@@ -801,6 +802,24 @@ describe('ArtistsController', () => {
       expect(mockReleasesService.removeByArtist).toHaveBeenCalledWith(
         mockArtist.id,
         releaseId,
+      );
+    });
+  });
+
+  describe('getSimilarArtists', () => {
+    it('should return similar artists', async () => {
+      const mockSimilarArtists = [
+        { ...mockArtist, id: '2', name: 'Similar Artist' },
+      ];
+      mockArtistsService.getRelatedArtists.mockResolvedValue(
+        mockSimilarArtists,
+      );
+
+      const result = await controller.getSimilarArtists(mockArtist.id);
+
+      expect(result).toEqual(mockSimilarArtists);
+      expect(artistsService.getRelatedArtists).toHaveBeenCalledWith(
+        mockArtist.id,
       );
     });
   });

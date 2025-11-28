@@ -126,4 +126,96 @@ export class ArtistsService {
     }
     return this.artistsRepository.save(artist);
   }
+
+  async getRelatedArtists(id: string): Promise<Artist[]> {
+    const artist = await this.artistsRepository.findOne({
+      where: { id },
+      relations: ['releases'],
+    });
+
+    if (!artist) {
+      throw new NotFoundException(`Artist with ID ${id} not found`);
+    }
+
+    const genres = new Set<string>();
+    if (artist.releases) {
+      artist.releases.forEach((release) => {
+        if (release.genres) {
+          release.genres.forEach((genre) => genres.add(genre));
+        }
+      });
+    }
+
+    if (genres.size === 0) {
+      return [];
+    }
+
+    const genreArray = Array.from(genres);
+
+    const qb = this.artistsRepository.createQueryBuilder('artist');
+    qb.innerJoin('artist.releases', 'release');
+    qb.where('artist.id != :id', { id });
+    qb.andWhere('release.genres && :genres', { genres: genreArray });
+
+    qb.groupBy('artist.id');
+    qb.addGroupBy('artist.name');
+    qb.addGroupBy('artist.imageUrl');
+    qb.addGroupBy('artist.followersCount');
+
+    qb.select([
+      'artist.id',
+      'artist.name',
+      'artist.imageUrl',
+      'artist.followersCount',
+    ]);
+
+    qb.addSelect('MAX(release.releaseDate)', 'lastReleaseDate');
+    qb.orderBy('MAX(release.releaseDate)', 'DESC');
+    qb.addOrderBy('artist.followersCount', 'DESC');
+
+    qb.limit(20);
+
+    const rawResults = await qb.getRawMany();
+
+    const artists = rawResults.map((raw) => {
+      const a = new Artist();
+      a.id = raw.artist_id;
+      a.name = raw.artist_name;
+      a.imageUrl = raw.artist_imageUrl;
+      a.followersCount = raw.artist_followersCount;
+      return a;
+    });
+
+    if (artists.length <= 3) {
+      return artists;
+    }
+
+    const top3 = artists.slice(0, 3);
+    const rest = artists.slice(3);
+
+    const seed = Math.floor(Date.now() / (1000 * 60 * 60));
+    const shuffledRest = this.shuffleWithSeed(rest, seed);
+
+    return [...top3, ...shuffledRest];
+  }
+
+  private shuffleWithSeed<T>(array: T[], seed: number): T[] {
+    let m = array.length,
+      t,
+      i;
+
+    const random = () => {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+
+    while (m) {
+      i = Math.floor(random() * m--);
+      t = array[m];
+      array[m] = array[i];
+      array[i] = t;
+    }
+
+    return array;
+  }
 }

@@ -29,6 +29,21 @@ describe('ArtistsService', () => {
     findOne: jest.fn(),
     remove: jest.fn(),
     findAndCount: jest.fn(),
+    createQueryBuilder: jest.fn(),
+  };
+
+  const mockQueryBuilder = {
+    innerJoin: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    addGroupBy: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    addOrderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    getRawMany: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -542,6 +557,87 @@ describe('ArtistsService', () => {
       await expect(
         service.decrementFollowers('non-existent-id'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getRelatedArtists', () => {
+    it('should throw NotFoundException if artist not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      await expect(
+        service.getRelatedArtists('non-existent-id'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return empty array if artist has no genres', async () => {
+      const artistWithoutGenres = { ...mockArtist, releases: [] };
+      mockRepository.findOne.mockResolvedValue(artistWithoutGenres);
+
+      const result = await service.getRelatedArtists(mockArtist.id);
+      expect(result).toEqual([]);
+    });
+
+    it('should return related artists', async () => {
+      const artistWithGenres = {
+        ...mockArtist,
+        releases: [{ genres: ['pop'] } as any],
+      };
+      mockRepository.findOne.mockResolvedValue(artistWithGenres);
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const rawResults = [
+        {
+          artist_id: '2',
+          artist_name: 'Related Artist',
+          artist_imageUrl: 'url',
+          artist_followersCount: 50,
+        },
+      ];
+      mockQueryBuilder.getRawMany.mockResolvedValue(rawResults);
+
+      const result = await service.getRelatedArtists(mockArtist.id);
+
+      expect(repository.createQueryBuilder).toHaveBeenCalledWith('artist');
+      expect(mockQueryBuilder.innerJoin).toHaveBeenCalledWith(
+        'artist.releases',
+        'release',
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('2');
+    });
+
+    it('should shuffle artists after top 3', async () => {
+      const artistWithGenres = {
+        ...mockArtist,
+        releases: [{ genres: ['pop'] } as any],
+      };
+      mockRepository.findOne.mockResolvedValue(artistWithGenres);
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const rawResults = [
+        { artist_id: '1', artist_name: 'A', artist_followersCount: 100 },
+        { artist_id: '2', artist_name: 'B', artist_followersCount: 90 },
+        { artist_id: '3', artist_name: 'C', artist_followersCount: 80 },
+        { artist_id: '4', artist_name: 'D', artist_followersCount: 70 },
+        { artist_id: '5', artist_name: 'E', artist_followersCount: 60 },
+      ];
+      mockQueryBuilder.getRawMany.mockResolvedValue(rawResults);
+
+      // Mock Date.now to ensure deterministic shuffling for test
+      const realDateNow = Date.now;
+      global.Date.now = jest.fn(() => 1678886400000); // Fixed timestamp
+
+      const result = await service.getRelatedArtists(mockArtist.id);
+
+      expect(result).toHaveLength(5);
+      expect(result[0].id).toBe('1'); // Top 1 fixed
+      expect(result[1].id).toBe('2'); // Top 2 fixed
+      expect(result[2].id).toBe('3'); // Top 3 fixed
+      // The rest should be present but order might change (or stay same depending on seed)
+      // We just verify they are in the result
+      expect(result.map((a) => a.id)).toContain('4');
+      expect(result.map((a) => a.id)).toContain('5');
+
+      global.Date.now = realDateNow;
     });
   });
 });

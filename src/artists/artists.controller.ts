@@ -37,6 +37,7 @@ import { UpdateArtistDto } from './dto/update-artist.dto';
 import { CreateReleaseDto } from '../releases/dto/create-release.dto';
 import { UpdateReleaseDto } from '../releases/dto/update-release.dto';
 import { ReleaseType } from '../releases/entities/release.entity';
+import { Artist } from './entities/artist.entity';
 
 @ApiTags('artists')
 @Controller('artists')
@@ -161,6 +162,18 @@ export class ArtistsController {
       console.error('Error creating artist:', error);
       throw error;
     }
+  }
+
+  @Get(':id/similar')
+  @ApiOperation({ summary: 'Get similar artists' })
+  @ApiParam({ name: 'id', description: 'Artist ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of similar artists based on genres',
+    type: [Artist],
+  })
+  async getSimilarArtists(@Param('id') id: string) {
+    return this.artistsService.getRelatedArtists(id);
   }
 
   @Get(':id')
