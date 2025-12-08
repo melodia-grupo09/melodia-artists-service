@@ -34,6 +34,7 @@ import { ReleasesService } from '../releases/releases.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { CreateArtistWithFileDto } from './dto/create-artist-with-file.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
+import { GetLatestReleaseDto } from './dto/get-latest-release.dto';
 import { CreateReleaseDto } from '../releases/dto/create-release.dto';
 import { UpdateReleaseDto } from '../releases/dto/update-release.dto';
 import { ReleaseType } from '../releases/entities/release.entity';
@@ -89,6 +90,23 @@ export class ArtistsController {
     }
 
     return this.artistsService.search(query, limit, page);
+  }
+
+  @Post('latest-release')
+  @ApiOperation({ summary: 'Get the latest release from a list of artists' })
+  @ApiBody({ type: GetLatestReleaseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'The latest release found among the provided artists',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No releases found for the provided artists',
+  })
+  async getLatestRelease(@Body() getLatestReleaseDto: GetLatestReleaseDto) {
+    return this.releasesService.findLatestReleaseByArtists(
+      getLatestReleaseDto.artistIds,
+    );
   }
 
   @Post()

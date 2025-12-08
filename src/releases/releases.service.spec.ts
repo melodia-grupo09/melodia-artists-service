@@ -1132,4 +1132,39 @@ describe('ReleasesService', () => {
       );
     });
   });
+
+  describe('findLatestReleaseByArtists', () => {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+    it('should return the latest release for the provided artists', async () => {
+      const artistIds = ['artist-1', 'artist-2'];
+      const expectedRelease = { ...mockRelease, id: 'latest-release' };
+
+      mockRepository.findOne.mockResolvedValue(expectedRelease);
+
+      const result = await service.findLatestReleaseByArtists(artistIds);
+
+      expect(result).toEqual(expectedRelease);
+      expect(mockRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: ReleaseStatus.PUBLISHED,
+          }),
+          relations: ['artist'],
+          order: {
+            releaseDate: 'DESC',
+          },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if no release is found', async () => {
+      const artistIds = ['artist-1', 'artist-2'];
+
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findLatestReleaseByArtists(artistIds),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

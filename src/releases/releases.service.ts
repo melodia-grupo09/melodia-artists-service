@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, In } from 'typeorm';
 import { Release, ReleaseType, ReleaseStatus } from './entities/release.entity';
 import { CreateReleaseDto } from './dto/create-release.dto';
 import { UpdateReleaseDto } from './dto/update-release.dto';
@@ -372,5 +372,24 @@ export class ReleasesService {
     }
 
     return { coverUrl: release.coverUrl };
+  }
+
+  async findLatestReleaseByArtists(artistIds: string[]): Promise<Release> {
+    const release = await this.releasesRepository.findOne({
+      where: {
+        artistId: In(artistIds),
+        status: ReleaseStatus.PUBLISHED,
+      },
+      relations: ['artist'],
+      order: {
+        releaseDate: 'DESC',
+      },
+    });
+
+    if (!release) {
+      throw new NotFoundException('No releases found for the provided artists');
+    }
+
+    return release;
   }
 }
